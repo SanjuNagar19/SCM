@@ -1,0 +1,8 @@
+streamlit
+openai
+pdfminer.six
+streamlit
+openai
+pymupdf
+python-dotenv
+numpy
