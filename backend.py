@@ -169,14 +169,27 @@ def get_db_connection():
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+    
+    # Create students table with original schema first
     cur.execute("""
     CREATE TABLE IF NOT EXISTS students (
         email TEXT PRIMARY KEY,
         name TEXT,
-        roll_number TEXT,
         created_at TEXT
     )
     """)
+    
+    # Add roll_number column if it doesn't exist (migration)
+    try:
+        cur.execute("ALTER TABLE students ADD COLUMN roll_number TEXT DEFAULT ''")
+        logger.info("Added roll_number column to students table")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            logger.info("roll_number column already exists")
+        else:
+            logger.error(f"Error adding roll_number column: {e}")
+            # Don't raise - continue with existing schema
+    
     cur.execute("""
     CREATE TABLE IF NOT EXISTS answers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,8 +240,18 @@ def save_student(name: str, email: str, roll_number: str = ""):
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("INSERT OR REPLACE INTO students(email, name, roll_number, created_at) VALUES (?, ?, ?, ?)",
-                        (email, name, roll_number, datetime.utcnow().isoformat()))
+            # Try the new schema first, fallback to old schema if needed
+            try:
+                cur.execute("INSERT OR REPLACE INTO students(email, name, roll_number, created_at) VALUES (?, ?, ?, ?)",
+                            (email, name, roll_number, datetime.utcnow().isoformat()))
+            except sqlite3.OperationalError as e:
+                if "no column named roll_number" in str(e).lower():
+                    # Fallback to old schema without roll_number
+                    logger.warning("Using old schema without roll_number column")
+                    cur.execute("INSERT OR REPLACE INTO students(email, name, created_at) VALUES (?, ?, ?)",
+                                (email, name, datetime.utcnow().isoformat()))
+                else:
+                    raise
         logger.info(f"Student saved: {email} (Roll: {roll_number})")
     except Exception as e:
         logger.error(f"Error saving student {email}: {e}")

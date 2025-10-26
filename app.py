@@ -197,9 +197,15 @@ def assignment_page():
         st.header("Assignment")
     with col_toggle:
         chat_button_text = "Hide Chat" if st.session_state.get('chat_visible', True) else "💬 Show Chat"
-        if st.button(chat_button_text, key="chat_toggle"):
+        if st.button(chat_button_text, key="chat_toggle", type="secondary"):
             st.session_state['chat_visible'] = not st.session_state.get('chat_visible', True)
             st.rerun()
+    
+    # Show chat status
+    if not st.session_state.get('chat_visible', True):
+        st.info("**Chat is hidden** - Click 'Show Chat' button above to restore it")
+    else:
+        st.info("Use the chatbot in the sidebar to get help with assignment questions! (Toggle chat visibility using the button above)")
     # Load questions for the selected section
     questions = get_assignment_questions(selected_section)
     # If section changed since last visit, reset question index and clear chat
@@ -343,8 +349,6 @@ def assignment_page():
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
             
             
-    st.info("Use the chatbot in the sidebar to get help with assignment questions! (Toggle chat visibility using the button above)")
-    
     st.markdown("---")
     
     # --- Student Session Section (moved from sidebar) ---
