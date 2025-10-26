@@ -292,12 +292,21 @@ def assignment_page():
                     st.rerun()
             else:
                 # Show disabled-style button with warning
-                if st.button("Next (Validation Required)", disabled=False, help="Complete numeric validation first"):
-                    st.error('**Validation Required**: You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding to the next question.')
-                    st.info('**Tip**: Scroll up to the "Auto-validate numeric tasks" section and complete both Task 2.1 and Task 2.2 validations.')
+                if st.button("Next (⚠️ Validation Required)", disabled=False, help="Complete numeric validation first"):
+                    st.error('⚠️ **Validation Required**: You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding to the next question.')
+                    st.info('💡 **Tip**: Scroll up to the "Auto-validate numeric tasks" section and complete both Task 2.1 and Task 2.2 validations.')
         else:
-            # Last question - show completion message
-            st.success("**Congratulations!** You have completed all assignment questions!\n You can now logout.")
+            # Last question - show final submit button instead of completion message
+            if st.button("🎯 Submit Final Assignment", type="primary"):
+                # Save current answer
+                save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
+                
+                st.success("🎉 **Assignment Submitted Successfully!**")
+                st.balloons()
+                st.info("💡 **What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button in the sidebar")
+                
+                # Optional: Mark assignment as completed
+                st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
             
             
     st.info("Use the chatbot in the sidebar to get help with assignment questions!")
@@ -443,63 +452,63 @@ def admin_page():
                 if not answers:
                     st.info("This student has not submitted any answers yet.")
                 else:
-                    # Group answers by question index
+                    # Group answers by question index and get latest submission only
                     questions_data = {}
                     for qidx, ans, submitted_at in answers:
                         if qidx not in questions_data:
-                            questions_data[qidx] = []
-                        questions_data[qidx].append((ans, submitted_at))
+                            questions_data[qidx] = (ans, submitted_at)
+                        else:
+                            # Keep the latest submission (assuming newer submissions have later timestamps)
+                            current_time = questions_data[qidx][1]
+                            if submitted_at > current_time:
+                                questions_data[qidx] = (ans, submitted_at)
                     
-                    # Display each question for grading
+                    # Display each question for grading (latest submission only)
                     for qidx in sorted(questions_data.keys()):
-                        question_submissions = questions_data[qidx]
+                        ans, submitted_at = questions_data[qidx]
                         
-                        with st.expander(f"Question {qidx + 1} ({len(question_submissions)} submission(s))", expanded=False):
+                        with st.expander(f"📋 Question {qidx + 1} (Latest Submission)", expanded=False):
                             # Show question text
                             questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
                             if qidx < len(questions):
                                 st.markdown("**Question:**")
                                 st.info(questions[qidx][:200] + "..." if len(questions[qidx]) > 200 else questions[qidx])
                             
-                            # Show all submissions for this question
-                            for idx, (ans, submitted_at) in enumerate(question_submissions):
-                                st.markdown(f"**Submission {idx + 1} (submitted: {submitted_at}):**")
-                                st.text_area("Student Answer:", value=ans, height=100, disabled=True, key=f"ans_display_{qidx}_{idx}")
-                                
-                                # Current grade
-                                current_grade = get_latest_grade(student_email, qidx)
-                                
-                                # Grading interface
-                                col1, col2, col3 = st.columns([2, 1, 1])
-                                
-                                with col1:
-                                    grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
-                                    current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
-                                    new_grade = st.selectbox(
-                                        "Grade:", 
-                                        options=grade_options,
-                                        index=current_idx,
-                                        key=f"grade_select_{student_email}_{qidx}_{idx}"
-                                    )
-                                
-                                with col2:
-                                    if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_{idx}"):
-                                        if new_grade:
-                                            save_grade(student_email, qidx, new_grade)
-                                            st.success("Grade saved!")
-                                            time.sleep(1)
-                                            st.rerun()
-                                        else:
-                                            st.warning("Please select a grade first.")
-                                
-                                with col3:
-                                    if current_grade:
-                                        st.metric("Current Grade", current_grade)
+                            # Show latest submission only
+                            st.markdown(f"**Latest Submission (submitted: {submitted_at}):**")
+                            st.text_area("Student Answer:", value=ans, height=100, disabled=True, key=f"ans_display_{qidx}_latest")
+                            
+                            # Current grade
+                            current_grade = get_latest_grade(student_email, qidx)
+                            
+                            # Grading interface
+                            col1, col2, col3 = st.columns([2, 1, 1])
+                            
+                            with col1:
+                                grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
+                                current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
+                                new_grade = st.selectbox(
+                                    "Grade:", 
+                                    options=grade_options,
+                                    index=current_idx,
+                                    key=f"grade_select_{student_email}_{qidx}_latest"
+                                )
+                            
+                            with col2:
+                                if st.button(f"💾 Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
+                                    if new_grade:
+                                        save_grade(student_email, qidx, new_grade)
+                                        st.success("✅ Grade saved!")
+                                        time.sleep(1)
+                                        st.rerun()
                                     else:
-                                        st.info("No grade yet")
-                                
-                                if idx < len(question_submissions) - 1:
-                                    st.markdown("---")
+                                        st.warning("Please select a grade first.")
+                            
+                            with col3:
+                                if current_grade:
+                                    st.metric("Current Grade", current_grade)
+                                else:
+                                    st.info("No grade yet")
     
     with tab2:
         st.subheader("Grading Overview")
