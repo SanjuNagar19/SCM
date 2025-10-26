@@ -158,14 +158,14 @@ def student_info_page():
         st.session_state['student_name'] = name
         st.session_state['student_email'] = email
         email_clean = email.strip().lower()
-        if name and email_clean.endswith(".whu.edu"):
+        if name and email_clean.endswith("@whu.edu"):
             st.session_state['info_complete'] = True
             # persist student
             save_student(name, email_clean)
             st.rerun()
         else:
             st.session_state['info_complete'] = False
-            st.warning("Please enter your name and a valid WHU email (ending with .whu.edu) to start the assignment.")
+            st.warning("Please enter your name and a valid WHU email (ending with @whu.edu) to start the assignment.")
 
     st.markdown("---")
 
