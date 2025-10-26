@@ -408,6 +408,203 @@ def admin_page():
         st.dataframe(df_recent, use_container_width=True)
     
     st.markdown("---")
+    
+    # Manual Grading Interface
+    st.header("📝 Manual Grading Interface")
+    
+    # Tabs for different grading views
+    tab1, tab2, tab3 = st.tabs(["🎯 Grade by Student", "📊 Grade Overview", "📈 Section Statistics"])
+    
+    with tab1:
+        st.subheader("Grade Individual Student Submissions")
+        
+        # Student selection
+        students = get_all_students()
+        if not students:
+            st.info("No students have registered yet.")
+        else:
+            student_options = [f"{name} ({email})" for email, name, _ in students]
+            selected_student = st.selectbox("Select a student to grade:", [""] + student_options)
+            
+            if selected_student:
+                # Extract email from selection
+                student_email = selected_student.split("(")[1].split(")")[0]
+                student_name = selected_student.split(" (")[0]
+                
+                st.markdown(f"**Grading submissions for:** {student_name} ({student_email})")
+                
+                # Section filter
+                sections = get_available_sections()
+                selected_section = st.selectbox("Filter by section:", ["All Sections"] + sections, key="grade_section")
+                
+                # Get answers for this student
+                answers = get_answers_by_email(student_email)
+                
+                if not answers:
+                    st.info("This student has not submitted any answers yet.")
+                else:
+                    # Group answers by question index
+                    questions_data = {}
+                    for qidx, ans, submitted_at in answers:
+                        if qidx not in questions_data:
+                            questions_data[qidx] = []
+                        questions_data[qidx].append((ans, submitted_at))
+                    
+                    # Display each question for grading
+                    for qidx in sorted(questions_data.keys()):
+                        question_submissions = questions_data[qidx]
+                        
+                        with st.expander(f"📋 Question {qidx + 1} ({len(question_submissions)} submission(s))", expanded=False):
+                            # Show question text
+                            questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
+                            if qidx < len(questions):
+                                st.markdown("**Question:**")
+                                st.info(questions[qidx][:200] + "..." if len(questions[qidx]) > 200 else questions[qidx])
+                            
+                            # Show all submissions for this question
+                            for idx, (ans, submitted_at) in enumerate(question_submissions):
+                                st.markdown(f"**Submission {idx + 1} (submitted: {submitted_at}):**")
+                                st.text_area("Student Answer:", value=ans, height=100, disabled=True, key=f"ans_display_{qidx}_{idx}")
+                                
+                                # Current grade
+                                current_grade = get_latest_grade(student_email, qidx)
+                                
+                                # Grading interface
+                                col1, col2, col3 = st.columns([2, 1, 1])
+                                
+                                with col1:
+                                    grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
+                                    current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
+                                    new_grade = st.selectbox(
+                                        "Grade:", 
+                                        options=grade_options,
+                                        index=current_idx,
+                                        key=f"grade_select_{student_email}_{qidx}_{idx}"
+                                    )
+                                
+                                with col2:
+                                    if st.button(f"💾 Save Grade", key=f"save_grade_{student_email}_{qidx}_{idx}"):
+                                        if new_grade:
+                                            save_grade(student_email, qidx, new_grade)
+                                            st.success("✅ Grade saved!")
+                                            time.sleep(1)
+                                            st.rerun()
+                                        else:
+                                            st.warning("Please select a grade first.")
+                                
+                                with col3:
+                                    if current_grade:
+                                        st.metric("Current Grade", current_grade)
+                                    else:
+                                        st.info("No grade yet")
+                                
+                                if idx < len(question_submissions) - 1:
+                                    st.markdown("---")
+    
+    with tab2:
+        st.subheader("📊 Grading Overview")
+        
+        # Section filter for overview
+        overview_section = st.selectbox("View grades for section:", ["All Sections"] + get_available_sections(), key="overview_section")
+        
+        # Create grading overview table
+        students = get_all_students()
+        if students:
+            grading_data = []
+            
+            for email, name, _ in students:
+                answers = get_answers_by_email(email)
+                student_row = {"Name": name, "Email": email}
+                
+                # Get unique question indices
+                question_indices = set()
+                for qidx, _, _ in answers:
+                    question_indices.add(qidx)
+                
+                # For each question, get the latest grade
+                for qidx in sorted(question_indices):
+                    grade = get_latest_grade(email, qidx)
+                    student_row[f"Q{qidx + 1}"] = grade if grade else "Not Graded"
+                
+                grading_data.append(student_row)
+            
+            if grading_data:
+                df_grades = pd.DataFrame(grading_data)
+                st.dataframe(df_grades, use_container_width=True)
+                
+                # Export grades
+                if st.button("📥 Export Grades as CSV"):
+                    csv = df_grades.to_csv(index=False)
+                    st.download_button(
+                        label="Download Grades CSV",
+                        data=csv,
+                        file_name=f"grades_{overview_section.replace(' ', '_')}.csv",
+                        mime="text/csv"
+                    )
+            else:
+                st.info("No graded submissions found.")
+        else:
+            st.info("No students registered yet.")
+    
+    with tab3:
+        st.subheader("📈 Section Statistics")
+        
+        # Statistics for each section
+        sections = get_available_sections()
+        
+        for section in sections:
+            with st.expander(f"📊 {section} Statistics"):
+                students = get_all_students()
+                section_stats = {
+                    "total_students": len(students),
+                    "students_with_submissions": 0,
+                    "total_submissions": 0,
+                    "graded_submissions": 0,
+                    "grade_distribution": {}
+                }
+                
+                for email, name, _ in students:
+                    answers = get_answers_by_email(email)
+                    if answers:
+                        section_stats["students_with_submissions"] += 1
+                        section_stats["total_submissions"] += len(answers)
+                        
+                        # Count graded submissions
+                        for qidx, _, _ in answers:
+                            grade = get_latest_grade(email, qidx)
+                            if grade:
+                                section_stats["graded_submissions"] += 1
+                                if grade in section_stats["grade_distribution"]:
+                                    section_stats["grade_distribution"][grade] += 1
+                                else:
+                                    section_stats["grade_distribution"][grade] = 1
+                
+                # Display statistics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Students", section_stats["total_students"])
+                with col2:
+                    st.metric("Students with Submissions", section_stats["students_with_submissions"])
+                with col3:
+                    st.metric("Total Submissions", section_stats["total_submissions"])
+                
+                col4, col5 = st.columns(2)
+                with col4:
+                    st.metric("Graded Submissions", section_stats["graded_submissions"])
+                with col5:
+                    if section_stats["total_submissions"] > 0:
+                        grading_progress = (section_stats["graded_submissions"] / section_stats["total_submissions"]) * 100
+                        st.metric("Grading Progress", f"{grading_progress:.1f}%")
+                
+                # Grade distribution
+                if section_stats["grade_distribution"]:
+                    st.markdown("**Grade Distribution:**")
+                    grade_df = pd.DataFrame(list(section_stats["grade_distribution"].items()), 
+                                          columns=["Grade", "Count"])
+                    st.bar_chart(grade_df.set_index("Grade"))
+    
+    st.markdown("---")
+    
     # Export all data as CSV
     import io, csv, json
     section = st.selectbox("Select section to export:", options=["All"] + get_available_sections())
@@ -453,38 +650,53 @@ def admin_page():
         data = buf.getvalue()
         buf.close()
         st.download_button("Download CSV", data=data, file_name="submissions_export.csv", mime="text/csv")
+    
     st.markdown("---")
-    # Admin UI assumes admin_logged_in is already True
+    st.header("🔍 Quick Student Lookup")
+    st.info("💡 **Tip**: Use the 'Manual Grading Interface' tabs above for comprehensive grading features.")
+    
+    # Quick lookup for student data
     students = get_all_students()
     emails = [s[0] for s in students]
-    selected = st.selectbox("Select student email:", options=[""] + emails)
+    selected = st.selectbox("Quick lookup - Select student email:", options=[""] + emails, key="quick_lookup")
+    
     if selected:
-        st.subheader(f"Submissions for {selected}")
+        # Find student name
+        student_name = next((name for email, name, _ in students if email == selected), "Unknown")
+        st.subheader(f"📋 Quick View: {student_name} ({selected})")
+        
+        # Show summary
         answers = get_answers_by_email(selected)
-        # show each submission; use submitted_at in key to avoid duplicate keys
-        for qidx, ans, submitted_at in answers:
-            st.markdown(f"**Q{qidx+1} (submitted {submitted_at}):**")
-            st.write(ans)
-            # sanitize timestamp for key
-            ts_key = submitted_at.replace(' ', '_').replace(':', '-').replace('.', '-') if submitted_at else str(qidx)
-            current_grade = get_latest_grade(selected, qidx)
-            grade_key = f"grade_{selected}_{qidx}_{ts_key}"
-            new_grade = st.text_input(f"Grade for Q{qidx+1}", value=current_grade or "", key=grade_key)
-            save_key = f"save_{selected}_{qidx}_{ts_key}"
-            if st.button(f"Save Grade Q{qidx+1}", key=save_key):
-                save_grade(selected, qidx, new_grade)
-                st.success("Grade saved")
-
-        # Chat history for this student
-        st.markdown("---")
-        st.subheader("Chat History")
         chats = get_chats_by_email(selected)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Submissions", len(answers))
+        with col2:
+            graded_count = sum(1 for qidx, _, _ in answers if get_latest_grade(selected, qidx))
+            st.metric("Graded", graded_count)
+        with col3:
+            st.metric("Chat Messages", len(chats))
+        
+        # Recent submissions preview
+        if answers:
+            st.markdown("**📝 Recent Submissions (preview):**")
+            recent_answers = sorted(answers, key=lambda x: x[2], reverse=True)[:3]
+            for qidx, ans, submitted_at in recent_answers:
+                grade = get_latest_grade(selected, qidx)
+                grade_display = f" - Grade: {grade}" if grade else " - Not graded"
+                st.markdown(f"• **Q{qidx+1}** ({submitted_at}){grade_display}")
+                st.text(ans[:100] + "..." if len(ans) > 100 else ans)
+        
+        # Chat history preview
         if chats:
-            for q, bot_resp, created_at in chats:
-                st.markdown(f"*{created_at}* - **Student:** {q}")
-                st.markdown(f"**Bot:** {bot_resp}")
-        else:
-            st.write("No chat history for this student.")
+            st.markdown("**💬 Recent Chat (preview):**")
+            recent_chats = sorted(chats, key=lambda x: x[2], reverse=True)[:2]
+            for q, bot_resp, created_at in recent_chats:
+                st.markdown(f"*{created_at}* - **Student:** {q[:80]}{'...' if len(q) > 80 else ''}")
+                st.markdown(f"**Bot:** {bot_resp[:80]}{'...' if len(bot_resp) > 80 else ''}")
+        
+        st.info("💡 For detailed grading, use the 'Grade by Student' tab above.")
 
 
 # --- Main App Flow ---

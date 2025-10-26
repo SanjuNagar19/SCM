@@ -23,11 +23,11 @@ load_dotenv()
 _config = {
     'openai_api_key': None,
     'admin_password': None,
-    'max_queries_per_hour': 10,
-    'max_tokens_per_day': 5000
+    'max_queries_per_hour': 50,
+    'max_tokens_per_day': 10000
 }
 
-def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 10, max_tokens: int = 5000):
+def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 50, max_tokens: int = 10000):
     """Set configuration from Streamlit secrets or environment variables"""
     global _config
     _config['openai_api_key'] = openai_key
