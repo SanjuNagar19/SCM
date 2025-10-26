@@ -17,6 +17,7 @@ from backend import (
 )
 import pandas as pd
 import os
+import time
 
 st.set_page_config(page_title="Supply Chain Learning", layout="wide")
 
@@ -97,7 +98,6 @@ if 'admin_login_time' not in st.session_state:
 
 # Check admin session timeout (30 minutes)
 if st.session_state.get('admin_logged_in') and st.session_state.get('admin_login_time'):
-    import time
     if time.time() - st.session_state['admin_login_time'] > 1800:  # 30 minutes
         st.session_state['admin_logged_in'] = False
         st.session_state['admin_login_time'] = None
@@ -254,8 +254,8 @@ def assignment_page():
                 st.session_state['question_idx'] -= 1
                 st.rerun()
     with col2:
-        if st.button("Next"):
-            if current_idx < num_questions - 1:
+        if current_idx < num_questions - 1:
+            if st.button("Next"):
                 # If on 7-Eleven and currently on Part 2 (index 1), require auto-checks
                 if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
                     auto_ok = st.session_state.get('auto_2_1_pass', False) and st.session_state.get('auto_2_2_pass', False)
@@ -266,7 +266,53 @@ def assignment_page():
                 save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
                 st.session_state['question_idx'] += 1
                 st.rerun()
+        else:
+            # Last question - show completion message
+            st.success("🎉 **Congratulations!** You have completed all assignment questions!")
+            st.info("💡 **What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button in the sidebar")
+            if st.button("🔄 Restart Assignment"):
+                st.session_state['question_idx'] = 0
+                st.rerun()
     st.info("Use the chatbot in the sidebar to get help with assignment questions!")
+    
+    # --- Student Session Section ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("👤 Student Session")
+    if st.session_state.get('student_name') and st.session_state.get('student_email'):
+        st.sidebar.success(f"Logged in as: {st.session_state['student_name']}")
+        st.sidebar.caption(f"Email: {st.session_state['student_email']}")
+        
+        # Show current progress
+        if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
+            questions = get_assignment_questions(st.session_state['selected_section'])
+            progress = min(st.session_state['question_idx'] + 1, len(questions))
+            st.sidebar.info(f"Progress: {progress}/{len(questions)} questions")
+        
+        # Assignment completion status
+        if st.session_state.get('question_idx', 0) >= len(get_assignment_questions(st.session_state.get('selected_section', 'Ch.3'))):
+            st.sidebar.success("✅ Assignment completed!")
+            st.sidebar.balloons()
+        
+        # Logout button
+        if st.sidebar.button("🚪 End Session & Logout", type="primary"):
+            # Clear student session data
+            st.session_state['info_complete'] = False
+            st.session_state['student_name'] = ""
+            st.session_state['student_email'] = ""
+            st.session_state['question_idx'] = 0
+            st.session_state['chat_history'] = []
+            st.session_state['user_question'] = ""
+            
+            # Clear any cached answers
+            for key in list(st.session_state.keys()):
+                if key.startswith('ans_'):
+                    del st.session_state[key]
+            
+            st.sidebar.success("👋 Successfully logged out!")
+            st.balloons()
+            time.sleep(1)
+            st.rerun()
+    
     # --- Chatbot Section ---
     st.sidebar.header("Course Chatbot")
     if 'chat_history' not in st.session_state:
