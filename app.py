@@ -410,10 +410,10 @@ def admin_page():
     st.markdown("---")
     
     # Manual Grading Interface
-    st.header("📝 Manual Grading Interface")
+    st.header("Manual Grading Interface")
     
     # Tabs for different grading views
-    tab1, tab2, tab3 = st.tabs(["🎯 Grade by Student", "📊 Grade Overview", "📈 Section Statistics"])
+    tab1, tab2, tab3 = st.tabs(["Grade by Student", " Grade Overview", "Section Statistics"])
     
     with tab1:
         st.subheader("Grade Individual Student Submissions")
@@ -454,7 +454,7 @@ def admin_page():
                     for qidx in sorted(questions_data.keys()):
                         question_submissions = questions_data[qidx]
                         
-                        with st.expander(f"📋 Question {qidx + 1} ({len(question_submissions)} submission(s))", expanded=False):
+                        with st.expander(f"Question {qidx + 1} ({len(question_submissions)} submission(s))", expanded=False):
                             # Show question text
                             questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
                             if qidx < len(questions):
@@ -483,10 +483,10 @@ def admin_page():
                                     )
                                 
                                 with col2:
-                                    if st.button(f"💾 Save Grade", key=f"save_grade_{student_email}_{qidx}_{idx}"):
+                                    if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_{idx}"):
                                         if new_grade:
                                             save_grade(student_email, qidx, new_grade)
-                                            st.success("✅ Grade saved!")
+                                            st.success("Grade saved!")
                                             time.sleep(1)
                                             st.rerun()
                                         else:
@@ -502,7 +502,7 @@ def admin_page():
                                     st.markdown("---")
     
     with tab2:
-        st.subheader("📊 Grading Overview")
+        st.subheader("Grading Overview")
         
         # Section filter for overview
         overview_section = st.selectbox("View grades for section:", ["All Sections"] + get_available_sections(), key="overview_section")
@@ -547,13 +547,13 @@ def admin_page():
             st.info("No students registered yet.")
     
     with tab3:
-        st.subheader("📈 Section Statistics")
+        st.subheader("Section Statistics")
         
         # Statistics for each section
         sections = get_available_sections()
         
         for section in sections:
-            with st.expander(f"📊 {section} Statistics"):
+            with st.expander(f"{section} Statistics"):
                 students = get_all_students()
                 section_stats = {
                     "total_students": len(students),
