@@ -486,48 +486,53 @@ def admin_page():
                     for qidx in sorted(questions_data.keys()):
                         ans, submitted_at = questions_data[qidx]
                         
-                        with st.expander(f"Question {qidx + 1} (Latest Submission)", expanded=False):
-                            # Show question text
-                            questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
-                            if qidx < len(questions):
-                                st.markdown("**Question:**")
-                                st.info(questions[qidx][:200] + "..." if len(questions[qidx]) > 200 else questions[qidx])
-                            
-                            # Show latest submission only
-                            st.markdown(f"**Latest Submission (submitted: {submitted_at}):**")
-                            st.text_area("Student Answer:", value=ans, height=100, disabled=True, key=f"ans_display_{qidx}_latest")
-                            
-                            # Current grade
-                            current_grade = get_latest_grade(student_email, qidx)
-                            
-                            # Grading interface
-                            col1, col2, col3 = st.columns([2, 1, 1])
-                            
-                            with col1:
-                                grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
-                                current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
-                                new_grade = st.selectbox(
-                                    "Grade:", 
-                                    options=grade_options,
-                                    index=current_idx,
-                                    key=f"grade_select_{student_email}_{qidx}_latest"
-                                )
-                            
-                            with col2:
-                                if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
-                                    if new_grade:
-                                        save_grade(student_email, qidx, new_grade)
-                                        st.success("Grade saved!")
-                                        time.sleep(1)
-                                        st.rerun()
-                                    else:
-                                        st.warning("Please select a grade first.")
-                            
-                            with col3:
-                                if current_grade:
-                                    st.metric("Current Grade", current_grade)
+                        # Display question directly without expander
+                        st.markdown(f"### Question {qidx + 1} (Latest Submission)")
+                        
+                        # Show question text
+                        questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
+                        if qidx < len(questions):
+                            st.markdown("**Question:**")
+                            st.info(questions[qidx][:200] + "..." if len(questions[qidx]) > 200 else questions[qidx])
+                        
+                        # Show latest submission only
+                        st.markdown(f"**Latest Submission (submitted: {submitted_at}):**")
+                        st.text_area("Student Answer:", value=ans, height=100, disabled=True, key=f"ans_display_{qidx}_latest")
+                        
+                        # Current grade
+                        current_grade = get_latest_grade(student_email, qidx)
+                        
+                        # Grading interface
+                        col1, col2, col3 = st.columns([2, 1, 1])
+                        
+                        with col1:
+                            grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
+                            current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
+                            new_grade = st.selectbox(
+                                "Grade:", 
+                                options=grade_options,
+                                index=current_idx,
+                                key=f"grade_select_{student_email}_{qidx}_latest"
+                            )
+                        
+                        with col2:
+                            if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
+                                if new_grade:
+                                    save_grade(student_email, qidx, new_grade)
+                                    st.success("Grade saved!")
+                                    time.sleep(1)
+                                    st.rerun()
                                 else:
-                                    st.info("No grade yet")
+                                    st.warning("Please select a grade first.")
+                        
+                        with col3:
+                            if current_grade:
+                                st.metric("Current Grade", current_grade)
+                            else:
+                                st.info("No grade yet")
+                        
+                        # Add separator between questions
+                        st.markdown("---")
     
     with tab2:
         st.subheader("Grading Overview")
