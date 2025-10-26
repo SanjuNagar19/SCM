@@ -66,39 +66,146 @@ st.markdown(
     .stButton>button { background-color: var(--whu-primary) !important; color: white !important; border-radius:6px; }
         .streamlit-expanderHeader { font-weight:600 }
         
-        /* Sidebar recovery - make the collapsed sidebar button more visible */
-        .css-1d391kg { /* Collapsed sidebar container */
+        /* ROBUST SIDEBAR RECOVERY - Multiple selectors for different Streamlit versions */
+        /* Target collapsed sidebar with multiple possible classes */
+        .css-1d391kg, .css-1cypcdb, .css-17eq0hr, section[data-testid="stSidebar"][aria-expanded="false"] {
             background: var(--whu-primary) !important;
             width: 3rem !important;
+            min-width: 3rem !important;
+            max-width: 3rem !important;
+            position: fixed !important;
+            left: 0 !important;
+            z-index: 999999 !important;
         }
-        .css-1d391kg button { /* The expand button when collapsed */
+        
+        /* Style the expand button with multiple selectors */
+        .css-1d391kg button, .css-1cypcdb button, .css-17eq0hr button,
+        section[data-testid="stSidebar"][aria-expanded="false"] button {
             background: var(--whu-primary) !important;
             color: white !important;
             width: 100% !important;
             height: 60px !important;
             border-radius: 0 8px 8px 0 !important;
             font-size: 18px !important;
+            border: none !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
         }
-        .css-1d391kg button:hover {
+        
+        .css-1d391kg button:hover, .css-1cypcdb button:hover, .css-17eq0hr button:hover,
+        section[data-testid="stSidebar"][aria-expanded="false"] button:hover {
             background: rgba(5,70,150,0.8) !important;
-            transform: scale(1.05);
+            transform: scale(1.05) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
         }
-        /* Add a visible chat icon when sidebar is collapsed */
-        .css-1d391kg::after {
-            content: "💬";
+        
+        /* Add visual indicators when sidebar is collapsed */
+        .css-1d391kg::after, .css-1cypcdb::after, .css-17eq0hr::after {
+            content: "💬 Menu";
             position: absolute;
             top: 120px;
             left: 50%;
-            transform: translateX(-50%);
-            font-size: 20px;
+            transform: translateX(-50%) rotate(-90deg);
+            font-size: 12px;
             background: white;
-            padding: 8px;
-            border-radius: 50%;
+            padding: 4px 8px;
+            border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            white-space: nowrap;
+            color: var(--whu-primary);
+            font-weight: bold;
+        }
+        
+        /* Force sidebar to always be accessible - emergency recovery */
+        .css-1d391kg, .css-1cypcdb, .css-17eq0hr {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Enhanced visibility for the collapsed state */
+        section[data-testid="stSidebar"] {
+            transition: all 0.3s ease !important;
+        }
+        
+        /* Emergency sidebar toggle button if all else fails */
+        .emergency-sidebar-toggle {
+            position: fixed;
+            top: 20px;
+            left: 10px;
+            z-index: 9999999;
+            background: var(--whu-primary);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
         }
         </style>
         """,
         unsafe_allow_html=True,
+)
+
+# JavaScript solution to handle browser local storage sidebar state
+st.markdown(
+    """
+    <script>
+    // Force sidebar recovery on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clear any stored sidebar state to prevent permanent collapse
+        if (typeof(Storage) !== "undefined") {
+            // Clear Streamlit sidebar state from localStorage
+            Object.keys(localStorage).forEach(key => {
+                if (key.includes('sidebar') || key.includes('stSidebar')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        }
+        
+        // Add emergency toggle button if sidebar is not accessible
+        setTimeout(function() {
+            var sidebar = document.querySelector('[data-testid="stSidebar"]');
+            var collapsedSidebar = document.querySelector('.css-1d391kg, .css-1cypcdb, .css-17eq0hr');
+            
+            if (!sidebar || (collapsedSidebar && collapsedSidebar.offsetWidth < 50)) {
+                var emergencyBtn = document.createElement('div');
+                emergencyBtn.className = 'emergency-sidebar-toggle';
+                emergencyBtn.innerHTML = '📋 Menu';
+                emergencyBtn.style.display = 'block';
+                emergencyBtn.onclick = function() {
+                    // Try to trigger sidebar expansion
+                    var buttons = document.querySelectorAll('[data-testid="stSidebar"] button, .css-1d391kg button, .css-1cypcdb button');
+                    buttons.forEach(btn => btn.click());
+                };
+                document.body.appendChild(emergencyBtn);
+            }
+        }, 1000);
+    });
+    
+    // Monitor for sidebar collapse and ensure it remains accessible
+    setInterval(function() {
+        var sidebar = document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar) {
+            var rect = sidebar.getBoundingClientRect();
+            if (rect.width < 100) {
+                // Sidebar is collapsed, ensure the expand button is visible and styled
+                var expandBtn = sidebar.querySelector('button');
+                if (expandBtn) {
+                    expandBtn.style.background = 'rgb(5,70,150)';
+                    expandBtn.style.color = 'white';
+                    expandBtn.style.height = '60px';
+                    expandBtn.style.borderRadius = '0 8px 8px 0';
+                    expandBtn.style.fontSize = '18px';
+                    expandBtn.title = 'Click to expand sidebar with Admin Login and Chat';
+                }
+            }
+        }
+    }, 2000);
+    </script>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.markdown(
@@ -230,6 +337,10 @@ if not st.session_state.get('admin_logged_in'):
 # --- Student Info Page ---
 def student_info_page():
     st.title("Supply Chain Learning")
+    
+    # Add sidebar hint
+    st.info("💡 **Tip:** If you don't see the sidebar menu on the left, look for a small arrow (►) or menu button on the far left edge of your screen to expand it. The sidebar contains the admin login and chatbot features.")
+    
     st.header("Student Information")
     name = st.text_input("Enter your name:", value=st.session_state['student_name'], key="student_name_input")
     email = st.text_input("Enter your email:", value=st.session_state['student_email'], key="student_email_input")
@@ -258,6 +369,20 @@ def student_info_page():
 # --- Assignment Page ---
 def assignment_page():
     st.title("Supply Chain Learning")
+    
+    # Add collapsible sidebar recovery hint
+    with st.expander("📋 Need the sidebar? (Admin Login / Chatbot)", expanded=False):
+        st.markdown("""
+        **If the sidebar is not visible:**
+        1. Look for a small arrow (►) or colored button on the far **left edge** of your browser window
+        2. Click it to expand the sidebar with Admin Login and Chatbot features
+        3. The sidebar may be collapsed but is always accessible via this expand button
+        
+        **Sidebar contains:**
+        - 🔐 Admin Login (for instructors)
+        - 💬 Course Chatbot (for students)
+        """)
+    
     st.markdown("---")
     # Section selector (Chapter / Case study)
     sections = get_available_sections()
