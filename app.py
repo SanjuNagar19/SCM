@@ -180,6 +180,53 @@ with st.sidebar:
                 st.session_state['admin_login_mode'] = False
                 st.rerun()
 
+# --- Chatbot Section (always available in sidebar for non-admins) ---
+if not st.session_state.get('admin_logged_in'):
+    st.sidebar.markdown("---")
+    st.sidebar.header("Course Chatbot")
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = []
+    if 'user_question' not in st.session_state:
+        st.session_state['user_question'] = ""
+    
+    # Only show chat if student info is complete
+    if st.session_state.get('info_complete'):
+        user_question = st.sidebar.text_area(
+            "Ask a question about the current assignment question or course PDF:",
+            value=st.session_state['user_question'],
+            key="chat_input_unique"
+        )
+        if st.sidebar.button("Send"):
+            if user_question:
+                # Get current assignment context
+                if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
+                    questions = get_assignment_questions(st.session_state['selected_section'])
+                    current_idx = st.session_state['question_idx']
+                    assignment_context = questions[current_idx] if questions and current_idx < len(questions) else ""
+                else:
+                    assignment_context = ""
+                
+                answer = answer_query(
+                    user_question, 
+                    assignment_context, 
+                    section=st.session_state.get('selected_section', 'Ch.3'),
+                    user_email=st.session_state.get('student_email', '')
+                )
+                st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
+                # persist chat
+                save_chat(st.session_state.get('student_email', ''), user_question, answer)
+                st.session_state['user_question'] = ""  # Clear input immediately
+                st.rerun()
+            else:
+                st.sidebar.write("Please enter a question.")
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("Chat History")
+        for q, a in st.session_state['chat_history']:
+            st.sidebar.markdown(f"**You:** {q}")
+            st.sidebar.markdown(f"**Bot:** {a}")
+    else:
+        st.sidebar.info("💬 Complete student information to access the chatbot")
+
 # --- Student Info Page ---
 def student_info_page():
     st.title("Supply Chain Learning")
@@ -748,52 +795,6 @@ def admin_page():
 if st.session_state.get('admin_logged_in'):
     admin_page()
 else:
-    # --- Chatbot Section (always available in sidebar) ---
-    st.sidebar.header("Course Chatbot")
-    if 'chat_history' not in st.session_state:
-        st.session_state['chat_history'] = []
-    if 'user_question' not in st.session_state:
-        st.session_state['user_question'] = ""
-    
-    # Only show chat if student info is complete
-    if st.session_state.get('info_complete'):
-        user_question = st.sidebar.text_area(
-            "Ask a question about the current assignment question or course PDF:",
-            value=st.session_state['user_question'],
-            key="chat_input_unique"
-        )
-        if st.sidebar.button("Send"):
-            if user_question:
-                # Get current assignment context
-                if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
-                    questions = get_assignment_questions(st.session_state['selected_section'])
-                    current_idx = st.session_state['question_idx']
-                    assignment_context = questions[current_idx] if questions and current_idx < len(questions) else ""
-                else:
-                    assignment_context = ""
-                
-                answer = answer_query(
-                    user_question, 
-                    assignment_context, 
-                    section=st.session_state.get('selected_section', 'Ch.3'),
-                    user_email=st.session_state.get('student_email', '')
-                )
-                st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
-                # persist chat
-                save_chat(st.session_state.get('student_email', ''), user_question, answer)
-                st.session_state['user_question'] = ""  # Clear input immediately
-                st.rerun()
-            else:
-                st.sidebar.write("Please enter a question.")
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("Chat History")
-        for q, a in st.session_state['chat_history']:
-            st.sidebar.markdown(f"**You:** {q}")
-            st.sidebar.markdown(f"**Bot:** {a}")
-    else:
-        st.sidebar.info("💬 Complete student information to access the chatbot")
-    
-    # Main content flow
     if not st.session_state['info_complete']:
         student_info_page()
         st.stop()
