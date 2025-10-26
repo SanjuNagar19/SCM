@@ -190,6 +190,9 @@ def assignment_page():
         # Clear chat history when changing sections
         st.session_state['chat_history'] = []
         st.session_state['user_question'] = ""
+        # Clear the chat input widget state
+        if "chat_input_unique" in st.session_state:
+            del st.session_state["chat_input_unique"]
     # tell backend which section we're working with (used for DB queries)
     import backend as _backend
     _backend.save_answer.current_section = selected_section
@@ -267,10 +270,7 @@ def assignment_page():
     else:
         # For all other questions, show the regular text area
         answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
-    if st.button("Submit Answer"):
-        # save current answer to DB
-        save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
-        st.success("Answer saved.")
+    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Previous"):
@@ -279,6 +279,9 @@ def assignment_page():
                 # Clear chat history when moving to new question
                 st.session_state['chat_history'] = []
                 st.session_state['user_question'] = ""
+                # Clear the chat input widget state
+                if "chat_input_unique" in st.session_state:
+                    del st.session_state["chat_input_unique"]
                 st.rerun()
     with col2:
         if current_idx < num_questions - 1:
@@ -298,6 +301,9 @@ def assignment_page():
                     # Clear chat history when moving to new question
                     st.session_state['chat_history'] = []
                     st.session_state['user_question'] = ""
+                    # Clear the chat input widget state
+                    if "chat_input_unique" in st.session_state:
+                        del st.session_state["chat_input_unique"]
                     st.rerun()
             else:
                 # Show disabled-style button with warning
