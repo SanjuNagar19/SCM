@@ -339,7 +339,7 @@ def student_info_page():
     st.title("Supply Chain Learning")
     
     # Add sidebar hint
-    st.info("💡 **Tip:** If you don't see the sidebar menu on the left, look for a small arrow (►) or menu button on the far left edge of your screen to expand it. The sidebar contains the admin login and chatbot features.")
+ 
     
     st.header("Student Information")
     name = st.text_input("Enter your name:", value=st.session_state['student_name'], key="student_name_input")
@@ -371,17 +371,7 @@ def assignment_page():
     st.title("Supply Chain Learning")
     
     # Add collapsible sidebar recovery hint
-    with st.expander("📋 Need the sidebar? (Admin Login / Chatbot)", expanded=False):
-        st.markdown("""
-        **If the sidebar is not visible:**
-        1. Look for a small arrow (►) or colored button on the far **left edge** of your browser window
-        2. Click it to expand the sidebar with Admin Login and Chatbot features
-        3. The sidebar may be collapsed but is always accessible via this expand button
-        
-        **Sidebar contains:**
-        - 🔐 Admin Login (for instructors)
-        - 💬 Course Chatbot (for students)
-        """)
+  
     
     st.markdown("---")
     # Section selector (Chapter / Case study)
