@@ -65,6 +65,37 @@ st.markdown(
         .small-muted {color:#666; font-size:13px}
     .stButton>button { background-color: var(--whu-primary) !important; color: white !important; border-radius:6px; }
         .streamlit-expanderHeader { font-weight:600 }
+        
+        /* Sidebar recovery - make the collapsed sidebar button more visible */
+        .css-1d391kg { /* Collapsed sidebar container */
+            background: var(--whu-primary) !important;
+            width: 3rem !important;
+        }
+        .css-1d391kg button { /* The expand button when collapsed */
+            background: var(--whu-primary) !important;
+            color: white !important;
+            width: 100% !important;
+            height: 60px !important;
+            border-radius: 0 8px 8px 0 !important;
+            font-size: 18px !important;
+        }
+        .css-1d391kg button:hover {
+            background: rgba(5,70,150,0.8) !important;
+            transform: scale(1.05);
+        }
+        /* Add a visible chat icon when sidebar is collapsed */
+        .css-1d391kg::after {
+            content: "💬";
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            background: white;
+            padding: 8px;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -97,8 +128,6 @@ if 'admin_logged_in' not in st.session_state:
     st.session_state['admin_logged_in'] = False
 if 'admin_login_time' not in st.session_state:
     st.session_state['admin_login_time'] = None
-if 'chat_visible' not in st.session_state:
-    st.session_state['chat_visible'] = True
 
 # Check admin session timeout (30 minutes)
 if st.session_state.get('admin_logged_in') and st.session_state.get('admin_login_time'):
@@ -190,22 +219,9 @@ def assignment_page():
     selected_section = st.selectbox("Select section:", options=sections, index=sections.index(st.session_state['selected_section']) if st.session_state['selected_section'] in sections else 0)
     st.session_state['selected_section'] = selected_section
     st.caption(f"Current section: {selected_section}")
-    
-    # Chat visibility toggle
-    col_header, col_toggle = st.columns([3, 1])
-    with col_header:
-        st.header("Assignment")
-    with col_toggle:
-        chat_button_text = "Hide Chat" if st.session_state.get('chat_visible', True) else "💬 Show Chat"
-        if st.button(chat_button_text, key="chat_toggle", type="secondary"):
-            st.session_state['chat_visible'] = not st.session_state.get('chat_visible', True)
-            st.rerun()
-    
-    # Show chat status
-    if not st.session_state.get('chat_visible', True):
-        st.info("**Chat is hidden** - Click 'Show Chat' button above to restore it")
-    else:
-        st.info("Use the chatbot in the sidebar to get help with assignment questions! (Toggle chat visibility using the button above)")
+    st.header("Assignment")
+    # Load questions for the selected section
+    questions = get_assignment_questions(selected_section)
     # Load questions for the selected section
     questions = get_assignment_questions(selected_section)
     # If section changed since last visit, reset question index and clear chat
@@ -394,41 +410,37 @@ def assignment_page():
             time.sleep(1)
             st.rerun()
     
-    # --- Chatbot Section (in sidebar) - Conditional Display ---
-    if st.session_state.get('chat_visible', True):
-        st.sidebar.header("Course Chatbot")
-        if 'chat_history' not in st.session_state:
-            st.session_state['chat_history'] = []
-        if 'user_question' not in st.session_state:
-            st.session_state['user_question'] = ""
-        user_question = st.sidebar.text_area(
-            "Ask a question about the current assignment question or course PDF:",
-            value=st.session_state['user_question'],
-            key="chat_input_unique"
-        )
-        if st.sidebar.button("Send"):
-            if user_question:
-                answer = answer_query(
-                    user_question, 
-                    assignment_context, 
-                    section=st.session_state.get('selected_section', 'Ch.3'),
-                    user_email=st.session_state.get('student_email', '')
-                )
-                st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
-                # persist chat
-                save_chat(st.session_state.get('student_email', ''), user_question, answer)
-                st.session_state['user_question'] = ""  # Clear input immediately
-                st.rerun()
-            else:
-                st.sidebar.write("Please enter a question.")
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("Chat History")
-        for q, a in st.session_state['chat_history']:
-            st.sidebar.markdown(f"**You:** {q}")
-            st.sidebar.markdown(f"**Bot:** {a}")
-    else:
-        # Show minimal message when chat is hidden
-        st.sidebar.info("💬 Chat is hidden. Use the 'Show Chat' button in the main area to restore it.")
+    # --- Chatbot Section (in sidebar) ---
+    st.sidebar.header("Course Chatbot")
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = []
+    if 'user_question' not in st.session_state:
+        st.session_state['user_question'] = ""
+    user_question = st.sidebar.text_area(
+        "Ask a question about the current assignment question or course PDF:",
+        value=st.session_state['user_question'],
+        key="chat_input_unique"
+    )
+    if st.sidebar.button("Send"):
+        if user_question:
+            answer = answer_query(
+                user_question, 
+                assignment_context, 
+                section=st.session_state.get('selected_section', 'Ch.3'),
+                user_email=st.session_state.get('student_email', '')
+            )
+            st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
+            # persist chat
+            save_chat(st.session_state.get('student_email', ''), user_question, answer)
+            st.session_state['user_question'] = ""  # Clear input immediately
+            st.rerun()
+        else:
+            st.sidebar.write("Please enter a question.")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Chat History")
+    for q, a in st.session_state['chat_history']:
+        st.sidebar.markdown(f"**You:** {q}")
+        st.sidebar.markdown(f"**Bot:** {a}")
         
 # --- Admin Page ---
 def admin_page():
