@@ -183,10 +183,13 @@ def assignment_page():
     st.header("Assignment")
     # Load questions for the selected section
     questions = get_assignment_questions(selected_section)
-    # If section changed since last visit, reset question index
+    # If section changed since last visit, reset question index and clear chat
     if st.session_state.get('last_section') != selected_section:
         st.session_state['question_idx'] = 0
         st.session_state['last_section'] = selected_section
+        # Clear chat history when changing sections
+        st.session_state['chat_history'] = []
+        st.session_state['user_question'] = ""
     # tell backend which section we're working with (used for DB queries)
     import backend as _backend
     _backend.save_answer.current_section = selected_section
@@ -273,6 +276,9 @@ def assignment_page():
         if st.button("Previous"):
             if current_idx > 0:
                 st.session_state['question_idx'] -= 1
+                # Clear chat history when moving to new question
+                st.session_state['chat_history'] = []
+                st.session_state['user_question'] = ""
                 st.rerun()
     with col2:
         if current_idx < num_questions - 1:
@@ -289,21 +295,24 @@ def assignment_page():
                     # save current answer before moving on
                     save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
                     st.session_state['question_idx'] += 1
+                    # Clear chat history when moving to new question
+                    st.session_state['chat_history'] = []
+                    st.session_state['user_question'] = ""
                     st.rerun()
             else:
                 # Show disabled-style button with warning
-                if st.button("Next (⚠️ Validation Required)", disabled=False, help="Complete numeric validation first"):
-                    st.error('⚠️ **Validation Required**: You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding to the next question.')
-                    st.info('💡 **Tip**: Scroll up to the "Auto-validate numeric tasks" section and complete both Task 2.1 and Task 2.2 validations.')
+                if st.button("Next (Validation Required)", disabled=False, help="Complete numeric validation first"):
+                    st.error('**Validation Required**: You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding to the next question.')
+                    st.info('**Tip**: Scroll up to the "Auto-validate numeric tasks" section and complete both Task 2.1 and Task 2.2 validations.')
         else:
             # Last question - show final submit button instead of completion message
-            if st.button("🎯 Submit Final Assignment", type="primary"):
+            if st.button("Submit Final Assignment", type="primary"):
                 # Save current answer
                 save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
                 
-                st.success("🎉 **Assignment Submitted Successfully!**")
+                st.success(" **Assignment Submitted Successfully!**")
                 st.balloons()
-                st.info("💡 **What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button in the sidebar")
+                st.info("**What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button below")
                 
                 # Optional: Mark assignment as completed
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
@@ -311,26 +320,30 @@ def assignment_page():
             
     st.info("Use the chatbot in the sidebar to get help with assignment questions!")
     
-    # --- Student Session Section ---
-    st.sidebar.markdown("---")
-    st.sidebar.header("Student Session")
+    st.markdown("---")
+    
+    # --- Student Session Section (moved from sidebar) ---
+    st.header("Student Session")
     if st.session_state.get('student_name') and st.session_state.get('student_email'):
-        st.sidebar.success(f"Logged in as: {st.session_state['student_name']}")
-        st.sidebar.caption(f"Email: {st.session_state['student_email']}")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.success(f"Logged in as: {st.session_state['student_name']}")
+            st.caption(f"Email: {st.session_state['student_email']}")
         
-        # Show current progress
-        if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
-            questions = get_assignment_questions(st.session_state['selected_section'])
-            progress = min(st.session_state['question_idx'] + 1, len(questions))
-            st.sidebar.info(f"Progress: {progress}/{len(questions)} questions")
+        with col2:
+            # Show current progress
+            if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
+                questions = get_assignment_questions(st.session_state['selected_section'])
+                progress = min(st.session_state['question_idx'] + 1, len(questions))
+                st.info(f"Progress: {progress}/{len(questions)} questions")
         
         # Assignment completion status
         if st.session_state.get('question_idx', 0) >= len(get_assignment_questions(st.session_state.get('selected_section', 'Ch.3'))):
-            st.sidebar.success("Assignment completed!")
-            st.sidebar.balloons()
+            st.success("Assignment completed!")
+            st.balloons()
         
         # Logout button
-        if st.sidebar.button("End Session & Logout", type="primary"):
+        if st.button("End Session & Logout", type="primary"):
             # Clear student session data
             st.session_state['info_complete'] = False
             st.session_state['student_name'] = ""
@@ -344,12 +357,12 @@ def assignment_page():
                 if key.startswith('ans_'):
                     del st.session_state[key]
             
-            st.sidebar.success("Successfully logged out!")
+            st.success("Successfully logged out!")
             st.balloons()
             time.sleep(1)
             st.rerun()
     
-    # --- Chatbot Section ---
+    # --- Chatbot Section (in sidebar) ---
     st.sidebar.header("Course Chatbot")
     if 'chat_history' not in st.session_state:
         st.session_state['chat_history'] = []
@@ -467,7 +480,7 @@ def admin_page():
                     for qidx in sorted(questions_data.keys()):
                         ans, submitted_at = questions_data[qidx]
                         
-                        with st.expander(f"📋 Question {qidx + 1} (Latest Submission)", expanded=False):
+                        with st.expander(f"Question {qidx + 1} (Latest Submission)", expanded=False):
                             # Show question text
                             questions = get_assignment_questions(selected_section if selected_section != "All Sections" else "Ch.3")
                             if qidx < len(questions):
@@ -495,10 +508,10 @@ def admin_page():
                                 )
                             
                             with col2:
-                                if st.button(f"💾 Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
+                                if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
                                     if new_grade:
                                         save_grade(student_email, qidx, new_grade)
-                                        st.success("✅ Grade saved!")
+                                        st.success("Grade saved!")
                                         time.sleep(1)
                                         st.rerun()
                                     else:
@@ -542,7 +555,7 @@ def admin_page():
                 st.dataframe(df_grades, use_container_width=True)
                 
                 # Export grades
-                if st.button("📥 Export Grades as CSV"):
+                if st.button("Export Grades as CSV"):
                     csv = df_grades.to_csv(index=False)
                     st.download_button(
                         label="Download Grades CSV",
@@ -661,8 +674,8 @@ def admin_page():
         st.download_button("Download CSV", data=data, file_name="submissions_export.csv", mime="text/csv")
     
     st.markdown("---")
-    st.header("🔍 Quick Student Lookup")
-    st.info("💡 **Tip**: Use the 'Manual Grading Interface' tabs above for comprehensive grading features.")
+    st.header("Quick Student Lookup")
+    st.info("**Tip**: Use the 'Manual Grading Interface' tabs above for comprehensive grading features.")
     
     # Quick lookup for student data
     students = get_all_students()
@@ -672,7 +685,7 @@ def admin_page():
     if selected:
         # Find student name
         student_name = next((name for email, name, _ in students if email == selected), "Unknown")
-        st.subheader(f"📋 Quick View: {student_name} ({selected})")
+        st.subheader(f"Quick View: {student_name} ({selected})")
         
         # Show summary
         answers = get_answers_by_email(selected)
@@ -689,7 +702,7 @@ def admin_page():
         
         # Recent submissions preview
         if answers:
-            st.markdown("**📝 Recent Submissions (preview):**")
+            st.markdown("**Recent Submissions (preview):**")
             recent_answers = sorted(answers, key=lambda x: x[2], reverse=True)[:3]
             for qidx, ans, submitted_at in recent_answers:
                 grade = get_latest_grade(selected, qidx)
@@ -699,13 +712,13 @@ def admin_page():
         
         # Chat history preview
         if chats:
-            st.markdown("**💬 Recent Chat (preview):**")
+            st.markdown("**Recent Chat (preview):**")
             recent_chats = sorted(chats, key=lambda x: x[2], reverse=True)[:2]
             for q, bot_resp, created_at in recent_chats:
                 st.markdown(f"*{created_at}* - **Student:** {q[:80]}{'...' if len(q) > 80 else ''}")
                 st.markdown(f"**Bot:** {bot_resp[:80]}{'...' if len(bot_resp) > 80 else ''}")
         
-        st.info("💡 For detailed grading, use the 'Grade by Student' tab above.")
+        st.info("For detailed grading, use the 'Grade by Student' tab above.")
 
 
 # --- Main App Flow ---
