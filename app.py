@@ -39,7 +39,7 @@ def setup_config():
             max_tokens = int(os.getenv('MAX_TOKENS_PER_DAY', '5000'))
         
         if not openai_key:
-            st.error("🚨 OpenAI API key not configured. Please set up Streamlit secrets or environment variables.")
+            st.error("OpenAI API key not configured. Please set up Streamlit secrets or environment variables.")
             st.stop()
         
         # Configure backend
@@ -107,7 +107,7 @@ if st.session_state.get('admin_logged_in') and st.session_state.get('admin_login
 with st.sidebar:
     st.sidebar.header("Administration")
     if st.session_state.get('admin_logged_in'):
-        st.success("👤 Admin logged in")
+        st.success("Admin logged in")
         remaining_time = 30 - (time.time() - st.session_state.get('admin_login_time', 0)) / 60
         if remaining_time > 0:
             st.caption(f"Session expires in {remaining_time:.0f} minutes")
@@ -202,11 +202,29 @@ def assignment_page():
     current_idx = st.session_state['question_idx']
     assignment_context = questions[current_idx] if questions else ""
     st.write(f"**Q{current_idx+1}:** {assignment_context}")
-    answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
     # --- Auto-validation for 7-Eleven numeric tasks (only show on Part 2) ---
     if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
-        with st.expander("Auto-validate numeric tasks (Part 2)"):
+        # For Part 2 of 7-Eleven case, we use specific numeric inputs instead of the general text area
+        st.info("**Part 2 - Quantitative Analysis**: Use the numeric validation tools below instead of the text area.")
+        
+        with st.expander("Auto-validate numeric tasks (Part 2)", expanded=True):
             st.write("Enter your numeric answers below for automatic checking.")
+            
+            # Validation status indicators
+            col_status1, col_status2 = st.columns(2)
+            with col_status1:
+                if st.session_state.get('auto_2_1_pass', False):
+                    st.success("Task 2.1 - Validated")
+                else:
+                    st.warning("Task 2.1 - Pending validation")
+            with col_status2:
+                if st.session_state.get('auto_2_2_pass', False):
+                    st.success("Task 2.2 - Validated")
+                else:
+                    st.warning("Task 2.2 - Pending validation")
+            
+            st.markdown("---")
+            
             # Task 2.1 – DC Utilization
             val_2_1 = st.number_input("Task 2.1 - Average stores per DC", value=0.0, format="%.2f", key="auto_2_1")
             if st.button("Check Task 2.1"):
@@ -243,6 +261,9 @@ def assignment_page():
                     # Provide step hints without revealing exact expected numbers
                     st.info("Hint: For each country compute (cost per truck ÷ stores per truck) × deliveries per store/day to get the per-store/day cost, then compare the two results. Check your arithmetic and units.")
                 save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if passed else 'FAIL'}")
+    else:
+        # For all other questions, show the regular text area
+        answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
     if st.button("Submit Answer"):
         # save current answer to DB
         save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
@@ -255,29 +276,35 @@ def assignment_page():
                 st.rerun()
     with col2:
         if current_idx < num_questions - 1:
-            if st.button("Next"):
-                # If on 7-Eleven and currently on Part 2 (index 1), require auto-checks
-                if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
-                    auto_ok = st.session_state.get('auto_2_1_pass', False) and st.session_state.get('auto_2_2_pass', False)
-                    if not auto_ok:
-                        st.warning('You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding.')
-                        st.stop()
-                # save current answer before moving on
-                save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
-                st.session_state['question_idx'] += 1
-                st.rerun()
+            # Check if we can proceed (for 7-Eleven Part 2 validation)
+            can_proceed = True
+            if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
+                auto_ok = st.session_state.get('auto_2_1_pass', False) and st.session_state.get('auto_2_2_pass', False)
+                if not auto_ok:
+                    can_proceed = False
+            
+            # Show Next button with appropriate behavior
+            if can_proceed:
+                if st.button("Next"):
+                    # save current answer before moving on
+                    save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
+                    st.session_state['question_idx'] += 1
+                    st.rerun()
+            else:
+                # Show disabled-style button with warning
+                if st.button("Next (Validation Required)", disabled=False, help="Complete numeric validation first"):
+                    st.error('**Validation Required**: You must pass the numeric auto-validation for Tasks 2.1 and 2.2 before proceeding to the next question.')
+                    st.info('**Tip**: Scroll up to the "Auto-validate numeric tasks" section and complete both Task 2.1 and Task 2.2 validations.')
         else:
             # Last question - show completion message
-            st.success("🎉 **Congratulations!** You have completed all assignment questions!")
-            st.info("💡 **What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button in the sidebar")
-            if st.button("🔄 Restart Assignment"):
-                st.session_state['question_idx'] = 0
-                st.rerun()
+            st.success("**Congratulations!** You have completed all assignment questions!\n You can now logout.")
+            
+            
     st.info("Use the chatbot in the sidebar to get help with assignment questions!")
     
     # --- Student Session Section ---
     st.sidebar.markdown("---")
-    st.sidebar.header("👤 Student Session")
+    st.sidebar.header("Student Session")
     if st.session_state.get('student_name') and st.session_state.get('student_email'):
         st.sidebar.success(f"Logged in as: {st.session_state['student_name']}")
         st.sidebar.caption(f"Email: {st.session_state['student_email']}")
@@ -290,11 +317,11 @@ def assignment_page():
         
         # Assignment completion status
         if st.session_state.get('question_idx', 0) >= len(get_assignment_questions(st.session_state.get('selected_section', 'Ch.3'))):
-            st.sidebar.success("✅ Assignment completed!")
+            st.sidebar.success("Assignment completed!")
             st.sidebar.balloons()
         
         # Logout button
-        if st.sidebar.button("🚪 End Session & Logout", type="primary"):
+        if st.sidebar.button("End Session & Logout", type="primary"):
             # Clear student session data
             st.session_state['info_complete'] = False
             st.session_state['student_name'] = ""
@@ -308,7 +335,7 @@ def assignment_page():
                 if key.startswith('ans_'):
                     del st.session_state[key]
             
-            st.sidebar.success("👋 Successfully logged out!")
+            st.sidebar.success("Successfully logged out!")
             st.balloons()
             time.sleep(1)
             st.rerun()
@@ -367,13 +394,13 @@ def admin_page():
         st.metric("Total Chat Interactions", len(chats))
     
     # Rate limiting status
-    st.subheader("⚡ Rate Limiting Status")
+    st.subheader("Rate Limiting Status")
     from backend import _user_queries
     active_users = len([email for email in _user_queries.keys() if _user_queries[email]])
     st.info(f"Active users with query history: {active_users}")
     
     # Recent activity
-    st.subheader("📊 Recent Activity")
+    st.subheader("Recent Activity")
     if submissions:
         recent_submissions = sorted(submissions, key=lambda x: x[4], reverse=True)[:10]
         df_recent = pd.DataFrame(recent_submissions, 
