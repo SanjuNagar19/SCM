@@ -173,6 +173,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS students (
         email TEXT PRIMARY KEY,
         name TEXT,
+        roll_number TEXT,
         created_at TEXT
     )
     """)
@@ -221,14 +222,14 @@ def init_db():
     conn.close()
 
 
-def save_student(name: str, email: str):
+def save_student(name: str, email: str, roll_number: str = ""):
     email = email.strip().lower()
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("INSERT OR REPLACE INTO students(email, name, created_at) VALUES (?, ?, ?)",
-                        (email, name, datetime.utcnow().isoformat()))
-        logger.info(f"Student saved: {email}")
+            cur.execute("INSERT OR REPLACE INTO students(email, name, roll_number, created_at) VALUES (?, ?, ?, ?)",
+                        (email, name, roll_number, datetime.utcnow().isoformat()))
+        logger.info(f"Student saved: {email} (Roll: {roll_number})")
     except Exception as e:
         logger.error(f"Error saving student {email}: {e}")
         raise
@@ -306,7 +307,7 @@ def get_all_students():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT email, name, created_at FROM students ORDER BY email")
+            cur.execute("SELECT email, name, roll_number, created_at FROM students ORDER BY email")
             rows = cur.fetchall()
         return rows
     except Exception as e:
@@ -373,7 +374,7 @@ def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3"
         if user_email:
             allowed, message = check_rate_limit(user_email)
             if not allowed:
-                return f"⚠️ {message}. Please try again later."
+                return f"{message}. Please try again later."
         
         # Ensure embeddings are available
         ensure_embeddings(section)

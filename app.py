@@ -89,12 +89,16 @@ if 'student_name' not in st.session_state:
     st.session_state['student_name'] = ""
 if 'student_email' not in st.session_state:
     st.session_state['student_email'] = ""
+if 'student_roll_number' not in st.session_state:
+    st.session_state['student_roll_number'] = ""
 if 'admin_login_mode' not in st.session_state:
     st.session_state['admin_login_mode'] = False
 if 'admin_logged_in' not in st.session_state:
     st.session_state['admin_logged_in'] = False
 if 'admin_login_time' not in st.session_state:
     st.session_state['admin_login_time'] = None
+if 'chat_visible' not in st.session_state:
+    st.session_state['chat_visible'] = True
 
 # Check admin session timeout (30 minutes)
 if st.session_state.get('admin_logged_in') and st.session_state.get('admin_login_time'):
@@ -153,19 +157,25 @@ def student_info_page():
     st.header("Student Information")
     name = st.text_input("Enter your name:", value=st.session_state['student_name'], key="student_name_input")
     email = st.text_input("Enter your email:", value=st.session_state['student_email'], key="student_email_input")
+    roll_number = st.text_input("Enter your roll number:", value=st.session_state['student_roll_number'], key="student_roll_number_input")
     submit = st.button("Submit")
     if submit:
         st.session_state['student_name'] = name
         st.session_state['student_email'] = email
+        st.session_state['student_roll_number'] = roll_number
         email_clean = email.strip().lower()
-        if name and email_clean.endswith("@whu.edu"):
+        roll_clean = roll_number.strip()
+        if name and email_clean.endswith("@whu.edu") and roll_clean:
             st.session_state['info_complete'] = True
             # persist student
-            save_student(name, email_clean)
+            save_student(name, email_clean, roll_clean)
             st.rerun()
         else:
             st.session_state['info_complete'] = False
-            st.warning("Please enter your name and a valid WHU email (ending with @whu.edu) to start the assignment.")
+            if not roll_clean:
+                st.warning("Please enter your name, roll number, and a valid WHU email (ending with @whu.edu) to start the assignment.")
+            else:
+                st.warning("Please enter your name, roll number, and a valid WHU email (ending with @whu.edu) to start the assignment.")
 
     st.markdown("---")
 
@@ -180,7 +190,16 @@ def assignment_page():
     selected_section = st.selectbox("Select section:", options=sections, index=sections.index(st.session_state['selected_section']) if st.session_state['selected_section'] in sections else 0)
     st.session_state['selected_section'] = selected_section
     st.caption(f"Current section: {selected_section}")
-    st.header("Assignment")
+    
+    # Chat visibility toggle
+    col_header, col_toggle = st.columns([3, 1])
+    with col_header:
+        st.header("Assignment")
+    with col_toggle:
+        chat_button_text = "Hide Chat" if st.session_state.get('chat_visible', True) else "💬 Show Chat"
+        if st.button(chat_button_text, key="chat_toggle"):
+            st.session_state['chat_visible'] = not st.session_state.get('chat_visible', True)
+            st.rerun()
     # Load questions for the selected section
     questions = get_assignment_questions(selected_section)
     # If section changed since last visit, reset question index and clear chat
@@ -324,7 +343,7 @@ def assignment_page():
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
             
             
-    st.info("Use the chatbot in the sidebar to get help with assignment questions!")
+    st.info("Use the chatbot in the sidebar to get help with assignment questions! (Toggle chat visibility using the button above)")
     
     st.markdown("---")
     
@@ -335,6 +354,8 @@ def assignment_page():
         with col1:
             st.success(f"Logged in as: {st.session_state['student_name']}")
             st.caption(f"Email: {st.session_state['student_email']}")
+            if st.session_state.get('student_roll_number'):
+                st.caption(f"Roll Number: {st.session_state['student_roll_number']}")
         
         with col2:
             # Show current progress
@@ -354,6 +375,7 @@ def assignment_page():
             st.session_state['info_complete'] = False
             st.session_state['student_name'] = ""
             st.session_state['student_email'] = ""
+            st.session_state['student_roll_number'] = ""
             st.session_state['question_idx'] = 0
             st.session_state['chat_history'] = []
             st.session_state['user_question'] = ""
@@ -368,37 +390,42 @@ def assignment_page():
             time.sleep(1)
             st.rerun()
     
-    # --- Chatbot Section (in sidebar) ---
-    st.sidebar.header("Course Chatbot")
-    if 'chat_history' not in st.session_state:
-        st.session_state['chat_history'] = []
-    if 'user_question' not in st.session_state:
-        st.session_state['user_question'] = ""
-    user_question = st.sidebar.text_area(
-        "Ask a question about the current assignment question or course PDF:",
-        value=st.session_state['user_question'],
-        key="chat_input_unique"
-    )
-    if st.sidebar.button("Send"):
-        if user_question:
-            answer = answer_query(
-                user_question, 
-                assignment_context, 
-                section=st.session_state.get('selected_section', 'Ch.3'),
-                user_email=st.session_state.get('student_email', '')
-            )
-            st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
-            # persist chat
-            save_chat(st.session_state.get('student_email', ''), user_question, answer)
-            st.session_state['user_question'] = ""  # Clear input immediately
-            st.rerun()
-        else:
-            st.sidebar.write("Please enter a question.")
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Chat History")
-    for q, a in st.session_state['chat_history']:
-        st.sidebar.markdown(f"**You:** {q}")
-        st.sidebar.markdown(f"**Bot:** {a}")
+    # --- Chatbot Section (in sidebar) - Conditional Display ---
+    if st.session_state.get('chat_visible', True):
+        st.sidebar.header("Course Chatbot")
+        if 'chat_history' not in st.session_state:
+            st.session_state['chat_history'] = []
+        if 'user_question' not in st.session_state:
+            st.session_state['user_question'] = ""
+        user_question = st.sidebar.text_area(
+            "Ask a question about the current assignment question or course PDF:",
+            value=st.session_state['user_question'],
+            key="chat_input_unique"
+        )
+        if st.sidebar.button("Send"):
+            if user_question:
+                answer = answer_query(
+                    user_question, 
+                    assignment_context, 
+                    section=st.session_state.get('selected_section', 'Ch.3'),
+                    user_email=st.session_state.get('student_email', '')
+                )
+                st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
+                # persist chat
+                save_chat(st.session_state.get('student_email', ''), user_question, answer)
+                st.session_state['user_question'] = ""  # Clear input immediately
+                st.rerun()
+            else:
+                st.sidebar.write("Please enter a question.")
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("Chat History")
+        for q, a in st.session_state['chat_history']:
+            st.sidebar.markdown(f"**You:** {q}")
+            st.sidebar.markdown(f"**Bot:** {a}")
+    else:
+        # Show minimal message when chat is hidden
+        st.sidebar.info("💬 Chat is hidden. Use the 'Show Chat' button in the main area to restore it.")
+        
 # --- Admin Page ---
 def admin_page():
     st.title("Admin - System Monitoring & Grading")
@@ -451,7 +478,7 @@ def admin_page():
         if not students:
             st.info("No students have registered yet.")
         else:
-            student_options = [f"{name} ({email})" for email, name, _ in students]
+            student_options = [f"{name} - {roll_number} ({email})" for email, name, roll_number, _ in students]
             selected_student = st.selectbox("Select a student to grade:", [""] + student_options)
             
             if selected_student:
@@ -545,9 +572,9 @@ def admin_page():
         if students:
             grading_data = []
             
-            for email, name, _ in students:
+            for email, name, roll_number, _ in students:
                 answers = get_answers_by_email(email)
-                student_row = {"Name": name, "Email": email}
+                student_row = {"Name": name, "Email": email, "Roll Number": roll_number}
                 
                 # Get unique question indices
                 question_indices = set()
@@ -596,7 +623,7 @@ def admin_page():
                     "grade_distribution": {}
                 }
                 
-                for email, name, _ in students:
+                for email, name, roll_number, _ in students:
                     answers = get_answers_by_email(email)
                     if answers:
                         section_stats["students_with_submissions"] += 1
@@ -643,15 +670,15 @@ def admin_page():
     section = st.selectbox("Select section to export:", options=["All"] + get_available_sections())
     if st.button("Export all data to CSV"):
         students = get_all_students()
-        student_map = {s[0].strip().lower(): s[1] for s in students}
+        student_map = {s[0].strip().lower(): (s[1], s[2]) for s in students}  # email -> (name, roll_number)
         submissions = get_all_submissions()  # list of (email, question_idx, answer, submitted_at)
         # Build CSV rows
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow(["email", "name", "question_idx", "answer", "answer_submitted_at", "latest_grade", "grade_graded_at", "chat_history_json"])
+        writer.writerow(["email", "name", "roll_number", "question_idx", "answer", "answer_submitted_at", "latest_grade", "grade_graded_at", "chat_history_json"])
         for email, qidx, ans, sec, submitted_at in submissions:
             email_clean = email.strip().lower()
-            name = student_map.get(email_clean, "")
+            name, roll_number = student_map.get(email_clean, ("", ""))
             # latest grade for this question
             # only include grades for the chosen section (if any)
             if section != "All" and sec != section:
@@ -679,7 +706,7 @@ def admin_page():
             for q_text, bot_resp, created_at in chats:
                 chat_list.append({"q": q_text, "bot": bot_resp, "at": created_at})
             chat_json = json.dumps(chat_list, ensure_ascii=False)
-            writer.writerow([email_clean, name, qidx, ans, submitted_at, grade_row, grade_time, chat_json])
+            writer.writerow([email_clean, name, roll_number, qidx, ans, submitted_at, grade_row, grade_time, chat_json])
         data = buf.getvalue()
         buf.close()
         st.download_button("Download CSV", data=data, file_name="submissions_export.csv", mime="text/csv")
@@ -694,9 +721,10 @@ def admin_page():
     selected = st.selectbox("Quick lookup - Select student email:", options=[""] + emails, key="quick_lookup")
     
     if selected:
-        # Find student name
-        student_name = next((name for email, name, _ in students if email == selected), "Unknown")
-        st.subheader(f"Quick View: {student_name} ({selected})")
+        # Find student name and roll number
+        student_info = next(((name, roll_number) for email, name, roll_number, _ in students if email == selected), ("Unknown", ""))
+        student_name, student_roll = student_info
+        st.subheader(f"📋 Quick View: {student_name} - {student_roll} ({selected})")
         
         # Show summary
         answers = get_answers_by_email(selected)
