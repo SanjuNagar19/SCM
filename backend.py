@@ -508,7 +508,7 @@ def get_assignment_questions(section: str = "Ch.3") -> List[str]:
         "Part C: Newsboy Model (Single-Period)\n\nA bakery produces croissants daily.\nCost to produce one croissant = €1.\nSelling price = €2.50.\nUnsold croissants are discarded with no salvage value.\nDaily demand is normally distributed with mean = 200, SD = 40.\n\n1. Determine the critical ratio.\n2. Find the z-value and optimal order quantity.\n3. Compute the expected number of unsold and lost sales.\n4. Explain what would change if leftover croissants could be sold next day at €0.50.\n5. Compare the Newsboy and EOQ models. When is each appropriate in real business contexts?",
 
         # Integrative Task
-        "🧩 Optional Integrative Task\n\nYou are a supply chain manager at a stationery company.\nUsing EOQ, Safety Inventory, and the Newsboy Model:\n\nIdentify which model applies to your regular office supplies, fast-moving promotional items, and seasonal products.\n\nJustify your reasoning in 200–300 words."
+        "Optional Integrative Task\n\nYou are a supply chain manager at a stationery company.\nUsing EOQ, Safety Inventory, and the Newsboy Model:\n\nIdentify which model applies to your regular office supplies, fast-moving promotional items, and seasonal products.\n\nJustify your reasoning in 200–300 words."
         ]
         return questions
     elif section == "7-Eleven Case 2015":
