@@ -1,0 +1,10 @@
+# Enhanced requirements for production deployment
+streamlit>=1.28.0
+openai>=1.0.0
+pymupdf>=1.23.0
+python-dotenv>=1.0.0
+numpy>=1.24.0
+psycopg2-binary>=2.9.0  # For PostgreSQL support
+sqlalchemy>=2.0.0       # For better database management
+streamlit-analytics>=0.4.0  # For usage monitoring
+requests>=2.31.0        # For API calls with retries
