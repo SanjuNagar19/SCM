@@ -590,7 +590,7 @@ def admin_page():
     
     with col3:
         chats = []
-        for student_email, _, _ in students:
+        for student_email, _, _, _ in students:
             chats.extend(get_chats_by_email(student_email))
         st.metric("Total Chat Interactions", len(chats))
     
