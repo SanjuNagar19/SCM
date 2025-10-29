@@ -23,11 +23,11 @@ load_dotenv()
 _config = {
     'openai_api_key': None,
     'admin_password': None,
-    'max_queries_per_hour': 50,
-    'max_tokens_per_day': 10000
+    'max_queries_per_hour': 500,
+    'max_tokens_per_day': 100000
 }
 
-def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 50, max_tokens: int = 10000):
+def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 500, max_tokens: int = 100000):
     """Set configuration from Streamlit secrets or environment variables"""
     global _config
     _config['openai_api_key'] = openai_key
@@ -41,7 +41,7 @@ def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 50, max
 _user_queries = {}  # {email: [(timestamp, token_count), ...]}
 _rate_limit_lock = threading.Lock()
 
-def check_rate_limit(email: str, estimated_tokens: int = 100) -> tuple[bool, str]:
+def check_rate_limit(email: str, estimated_tokens: int = 10000) -> tuple[bool, str]:
     """Check if user is within rate limits. Returns (allowed, message)"""
     with _rate_limit_lock:
         current_time = datetime.utcnow()
@@ -477,7 +477,7 @@ def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3"
                         "role": "user", 
                         "content": prompt
                     }],
-                    max_tokens=300,
+                    max_tokens=1000,
                     temperature=0.7
                 )
                 
