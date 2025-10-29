@@ -101,7 +101,7 @@ st.markdown(
         
         /* Add visual indicators when sidebar is collapsed */
         .css-1d391kg::after, .css-1cypcdb::after, .css-17eq0hr::after {
-            content: "💬 Menu";
+            content: "Menu";
             position: absolute;
             top: 120px;
             left: 50%;
@@ -332,7 +332,7 @@ if not st.session_state.get('admin_logged_in'):
             st.sidebar.markdown(f"**You:** {q}")
             st.sidebar.markdown(f"**Bot:** {a}")
     else:
-        st.sidebar.info("💬 Complete student information to access the chatbot")
+        st.sidebar.info("Complete student information to access the chatbot")
 
 # --- Student Info Page ---
 def student_info_page():
@@ -475,9 +475,8 @@ def assignment_page():
     elif st.session_state.get('selected_section') == 'Dragon Fire Case':
         # Add interactive calculation tools for different phases
         if current_idx == 0:  # Phase 1: Product & Market Analysis
-            st.info("💡 **Interactive Tools**: Use the calculators below to help with your analysis")
             
-            with st.expander("📊 Volume & Container Calculator", expanded=True):
+            with st.expander("Volume & Container Calculator", expanded=True):
                 st.markdown("**Step 1: Calculate powder volume needed**")
                 
                 col1, col2 = st.columns(2)
@@ -487,12 +486,12 @@ def assignment_page():
                 
                 with col2:
                     powder_density = st.number_input("Powder density (kg/L)", min_value=0.3, max_value=0.8, value=0.5, step=0.1)
-                    container_volume = st.number_input("Container volume (m³)", min_value=60, max_value=80, value=67, step=1)
+                    container_choice = st.selectbox("Container volume", options=[33, 67], format_func=lambda x: f"{x} m³")
                 
                 # Calculations
                 total_powder_kg = (drinks_target * powder_per_drink) / 1000
                 total_volume_m3 = (total_powder_kg / powder_density) / 1000
-                containers_needed = total_volume_m3 / container_volume
+                containers_needed = total_volume_m3 / container_choice
                 
                 st.markdown("**Results:**")
                 col1, col2, col3 = st.columns(3)
@@ -510,9 +509,8 @@ def assignment_page():
                     st.success("Calculation saved!")
         
         elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
-            st.info("🚢 **Transportation Cost Calculator**: Compare different shipping modes")
             
-            with st.expander("💰 Mode Comparison Calculator", expanded=True):
+            with st.expander("Mode Comparison Calculator", expanded=True):
                 # Get container count from previous calculation or let user input
                 containers = st.number_input("Number of containers to ship", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
                 total_kg = st.number_input("Total weight (kg)", min_value=1000, max_value=50000, value=10000, step=1000)
@@ -521,7 +519,7 @@ def assignment_page():
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.markdown("**🚢 Sea Freight**")
+                    st.markdown("**Sea Freight**")
                     sea_cost_per_container = st.number_input("Cost per container ($)", 2000, 5000, 2500, key="sea_cost")
                     sea_days = st.number_input("Transit days", 25, 40, 32, key="sea_days")
                     sea_total = containers * sea_cost_per_container
@@ -529,7 +527,7 @@ def assignment_page():
                     st.metric("Cost per kg", f"${sea_total/total_kg:.2f}")
                 
                 with col2:
-                    st.markdown("**✈️ Air Freight**")
+                    st.markdown("**Air Freight**")
                     air_cost_per_kg = st.number_input("Cost per kg ($)", 6, 15, 10, key="air_cost")
                     air_days = st.number_input("Transit days", 2, 7, 4, key="air_days")
                     air_total = total_kg * air_cost_per_kg
@@ -537,7 +535,7 @@ def assignment_page():
                     st.metric("Cost per kg", f"${air_total/total_kg:.2f}")
                 
                 with col3:
-                    st.markdown("**🚂 Rail Freight**")
+                    st.markdown("**Rail Freight**")
                     rail_cost_per_container = st.number_input("Cost per container ($)", 3000, 6000, 4500, key="rail_cost")
                     rail_days = st.number_input("Transit days", 15, 30, 22, key="rail_days")
                     rail_total = containers * rail_cost_per_container
@@ -546,7 +544,7 @@ def assignment_page():
                 
                 # Comparison summary
                 st.markdown("---")
-                st.markdown("**📊 Quick Comparison:**")
+                st.markdown("**Quick Comparison:**")
                 modes_data = {
                     'Mode': ['Sea Freight', 'Air Freight', 'Rail Freight'],
                     'Total Cost ($)': [f"{sea_total:,.0f}", f"{air_total:,.0f}", f"{rail_total:,.0f}"],
@@ -560,6 +558,63 @@ def assignment_page():
                 if st.button("Save Transportation Analysis"):
                     save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
                     st.success("Analysis saved!")
+        
+        elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
+            # Assign a random disruption scenario to each student based on their email
+            import hashlib
+            student_email = st.session_state.get('student_email', 'anonymous')
+            # Use hash of email to ensure same student always gets same scenario
+            hash_value = int(hashlib.md5(student_email.encode()).hexdigest(), 16)
+            scenario_number = (hash_value % 3) + 1
+            
+            scenarios = {
+                1: {
+                    "title": "Suez Canal Blockage",
+                    "description": "A major ship blocks the Suez Canal for 3 weeks (like Ever Given in 2021). This affects all sea freight shipments from Europe to Asia.",
+                    "impacts": [
+                        "Sea freight delays of 3+ weeks",
+                        "Alternative routes around Africa add 2 weeks and 20% cost",
+                        "Air freight capacity becomes scarce and expensive",
+                        "Customer inventory runs low"
+                    ]
+                },
+                2: {
+                    "title": "COVID-19 Port Closure",
+                    "description": "Shanghai port closes for 2 weeks due to COVID outbreak. This is China's largest port handling 25% of container traffic.",
+                    "impacts": [
+                        "All Shanghai shipments diverted to other ports",
+                        "Secondary ports become congested",
+                        "Inland transport costs increase from alternative ports",
+                        "Customs clearance delays at backup ports"
+                    ]
+                },
+                3: {
+                    "title": "Regulatory Challenge",
+                    "description": "China suddenly restricts coca leaf imports pending safety review. This affects all coca-based products entering China.",
+                    "impacts": [
+                        "All Dragon Fire shipments blocked at border",
+                        "Need alternative product formulation",
+                        "Existing inventory may be confiscated",
+                        "Market launch delayed indefinitely"
+                    ]
+                }
+            }
+            
+            assigned_scenario = scenarios[scenario_number]
+            
+            st.info(f"**Your Assigned Disruption**: {assigned_scenario['title']}")
+            
+            with st.expander("Scenario Details", expanded=True):
+                st.markdown(f"**Situation**: {assigned_scenario['description']}")
+                st.markdown("**Key Impacts**:")
+                for impact in assigned_scenario['impacts']:
+                    st.markdown(f"• {impact}")
+            
+            # Save the assigned scenario
+            scenario_result = f"Assigned Scenario: {assigned_scenario['title']} - {assigned_scenario['description']}"
+            if st.button("Confirm Scenario Assignment"):
+                save_answer(st.session_state.get('student_email', ''), 97, scenario_result)
+                st.success(f"Scenario assigned: {assigned_scenario['title']}")
         
         # For all Dragon Fire questions, also show the regular text area
         answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
@@ -963,7 +1018,7 @@ def admin_page():
         # Find student name and roll number
         student_info = next(((name, roll_number) for email, name, roll_number, _ in students if email == selected), ("Unknown", ""))
         student_name, student_roll = student_info
-        st.subheader(f"📋 Quick View: {student_name} - {student_roll} ({selected})")
+        st.subheader(f"Quick View: {student_name} - {student_roll} ({selected})")
         
         # Show summary
         answers = get_answers_by_email(selected)
