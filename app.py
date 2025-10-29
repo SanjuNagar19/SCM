@@ -557,46 +557,14 @@ def assignment_page():
                         st.metric("Rail Total Cost", f"${rail_total:,.0f}")
                         st.metric("Rail Cost per kg", f"${rail_total/total_kg:.2f}")
                     
-                    # Editable Trade-off Matrix
-                    st.markdown("---")
-                    st.markdown("**Trade-off Analysis Matrix**")
-                    st.info("Rate each transportation mode on the factors below (1=Poor, 5=Excellent)")
-                    
-                    # Create editable matrix
-                    factors = ['Cost Efficiency', 'Speed', 'Reliability', 'Environmental Impact', 'Capacity']
-                    
-                    trade_off_data = {}
-                    for factor in factors:
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            sea_rating = st.selectbox(f"Sea - {factor}", options=[1,2,3,4,5], key=f"sea_{factor.replace(' ', '_').lower()}")
-                        with col2:
-                            air_rating = st.selectbox(f"Air - {factor}", options=[1,2,3,4,5], key=f"air_{factor.replace(' ', '_').lower()}")
-                        with col3:
-                            rail_rating = st.selectbox(f"Rail - {factor}", options=[1,2,3,4,5], key=f"rail_{factor.replace(' ', '_').lower()}")
-                        
-                        trade_off_data[factor] = {
-                            'Sea': sea_rating,
-                            'Air': air_rating,
-                            'Rail': rail_rating
-                        }
-                    
-                    # Display the completed matrix
-                    st.markdown("**Your Trade-off Matrix:**")
-                    import pandas as pd
-                    df_matrix = pd.DataFrame(trade_off_data).T
-                    st.dataframe(df_matrix)
-                    
                     # Save comparison results
                     comparison_result = f"Transport Comparison - Sea: ${sea_total:,.0f} ({sea_days}d), Air: ${air_total:,.0f} ({air_days}d), Rail: ${rail_total:,.0f} ({rail_days}d)"
-                    matrix_result = f"Trade-off Matrix: {trade_off_data}"
-                    combined_result = f"{comparison_result} | {matrix_result}"
                     
                     if st.button("Save Transportation Analysis"):
-                        save_answer(st.session_state.get('student_email', ''), 98, combined_result)
+                        save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
                         st.success("Analysis saved!")
                 else:
-                    st.info("Please fill in all transportation research values to see calculations and trade-off matrix")
+                    st.info("Please fill in all transportation research values to see calculations")
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
             # Assign a random disruption scenario to each student based on their email
