@@ -469,7 +469,7 @@ def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3"
         for attempt in range(max_retries):
             try:
                 response = openai.chat.completions.create(
-                    model="gpt-5",
+                    model="gpt-4",
                     messages=[{
                         "role": "system", 
                         "content": system_context
