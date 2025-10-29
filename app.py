@@ -477,87 +477,126 @@ def assignment_page():
         if current_idx == 0:  # Phase 1: Product & Market Analysis
             
             with st.expander("Volume & Container Calculator", expanded=True):
-                st.markdown("**Step 1: Calculate powder volume needed**")
+                st.markdown("**Calculate powder volume and containers needed**")
+                st.info("Research and input appropriate values for density and container sizes")
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    drinks_target = st.number_input("Target drinks (Year 1)", min_value=100000, max_value=10000000, value=1000000, step=100000)
-                    powder_per_drink = st.number_input("Powder per drink (grams)", min_value=5, max_value=50, value=10, step=1)
+                    drinks_target = st.number_input("Target drinks (Year 1)", min_value=1, value=None, placeholder="Enter target drinks")
+                    powder_per_drink = st.number_input("Powder per drink (grams)", min_value=1, value=None, placeholder="Enter grams per drink")
                 
                 with col2:
-                    powder_density = st.number_input("Powder density (kg/L)", min_value=0.3, max_value=0.8, value=0.5, step=0.1)
-                    container_choice = st.selectbox("Container volume", options=[33, 67], format_func=lambda x: f"{x} m³")
+                    powder_density = st.number_input("Powder density (kg/L)", min_value=0.1, max_value=2.0, value=None, placeholder="Research and enter density")
+                    container_volume = st.number_input("Container volume (m³)", min_value=1, max_value=100, value=None, placeholder="Research container sizes")
                 
-                # Calculations
-                total_powder_kg = (drinks_target * powder_per_drink) / 1000
-                total_volume_m3 = (total_powder_kg / powder_density) / 1000
-                containers_needed = total_volume_m3 / container_choice
-                
-                st.markdown("**Results:**")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Powder", f"{total_powder_kg:,.0f} kg")
-                with col2:
-                    st.metric("Volume Needed", f"{total_volume_m3:.1f} m³")
-                with col3:
-                    st.metric("Containers", f"{containers_needed:.1f}")
-                
-                # Save calculation results for grading
-                calc_result = f"Volume Calculator: {drinks_target:,} drinks → {total_powder_kg:,.0f} kg → {total_volume_m3:.1f} m³ → {containers_needed:.1f} containers"
-                if st.button("Save Volume Calculation"):
-                    save_answer(st.session_state.get('student_email', ''), 99, calc_result)  # Special index for calculations
-                    st.success("Calculation saved!")
+                # Only show calculations if all values are provided
+                if drinks_target and powder_per_drink and powder_density and container_volume:
+                    # Calculations
+                    total_powder_kg = (drinks_target * powder_per_drink) / 1000
+                    total_volume_m3 = (total_powder_kg / powder_density) / 1000
+                    containers_needed = total_volume_m3 / container_volume
+                    
+                    st.markdown("**Results:**")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Powder", f"{total_powder_kg:,.0f} kg")
+                    with col2:
+                        st.metric("Volume Needed", f"{total_volume_m3:.1f} m³")
+                    with col3:
+                        st.metric("Containers", f"{containers_needed:.1f}")
+                    
+                    # Save calculation results for grading
+                    calc_result = f"Volume Calculator: {drinks_target:,} drinks → {total_powder_kg:,.0f} kg → {total_volume_m3:.1f} m³ → {containers_needed:.1f} containers"
+                    if st.button("Save Volume Calculation"):
+                        save_answer(st.session_state.get('student_email', ''), 99, calc_result)  # Special index for calculations
+                        st.success("Calculation saved!")
+                else:
+                    st.info("Please fill in all values to see calculations")
         
         elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
             
             with st.expander("Mode Comparison Calculator", expanded=True):
-                # Get container count from previous calculation or let user input
-                containers = st.number_input("Number of containers to ship", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
-                total_kg = st.number_input("Total weight (kg)", min_value=1000, max_value=50000, value=10000, step=1000)
+                # Basic inputs without defaults
+                containers = st.number_input("Number of containers to ship", min_value=0.1, max_value=10.0, value=None, placeholder="Enter container count")
+                total_kg = st.number_input("Total weight (kg)", min_value=1000, max_value=50000, value=None, placeholder="Enter total weight")
                 
-                st.markdown("**Transportation Costs:**")
+                st.markdown("**Research Transportation Costs and Times:**")
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     st.markdown("**Sea Freight**")
-                    sea_cost_per_container = st.number_input("Cost per container ($)", 2000, 5000, 2500, key="sea_cost")
-                    sea_days = st.number_input("Transit days", 25, 40, 32, key="sea_days")
-                    sea_total = containers * sea_cost_per_container
-                    st.metric("Total Cost", f"${sea_total:,.0f}")
-                    st.metric("Cost per kg", f"${sea_total/total_kg:.2f}")
+                    sea_cost_per_container = st.number_input("Cost per container ($)", min_value=1000, max_value=10000, value=None, placeholder="Research sea freight cost", key="sea_cost")
+                    sea_days = st.number_input("Transit days", min_value=10, max_value=60, value=None, placeholder="Research transit time", key="sea_days")
                 
                 with col2:
                     st.markdown("**Air Freight**")
-                    air_cost_per_kg = st.number_input("Cost per kg ($)", 6, 15, 10, key="air_cost")
-                    air_days = st.number_input("Transit days", 2, 7, 4, key="air_days")
-                    air_total = total_kg * air_cost_per_kg
-                    st.metric("Total Cost", f"${air_total:,.0f}")
-                    st.metric("Cost per kg", f"${air_total/total_kg:.2f}")
+                    air_cost_per_kg = st.number_input("Cost per kg ($)", min_value=1, max_value=30, value=None, placeholder="Research air freight cost", key="air_cost")
+                    air_days = st.number_input("Transit days", min_value=1, max_value=14, value=None, placeholder="Research transit time", key="air_days")
                 
                 with col3:
                     st.markdown("**Rail Freight**")
-                    rail_cost_per_container = st.number_input("Cost per container ($)", 3000, 6000, 4500, key="rail_cost")
-                    rail_days = st.number_input("Transit days", 15, 30, 22, key="rail_days")
+                    rail_cost_per_container = st.number_input("Cost per container ($)", min_value=2000, max_value=15000, value=None, placeholder="Research rail freight cost", key="rail_cost")
+                    rail_days = st.number_input("Transit days", min_value=7, max_value=45, value=None, placeholder="Research transit time", key="rail_days")
+                
+                # Only show calculations if all values are provided
+                if all([containers, total_kg, sea_cost_per_container, sea_days, air_cost_per_kg, air_days, rail_cost_per_container, rail_days]):
+                    # Calculations
+                    sea_total = containers * sea_cost_per_container
+                    air_total = total_kg * air_cost_per_kg
                     rail_total = containers * rail_cost_per_container
-                    st.metric("Total Cost", f"${rail_total:,.0f}")
-                    st.metric("Cost per kg", f"${rail_total/total_kg:.2f}")
-                
-                # Comparison summary
-                st.markdown("---")
-                st.markdown("**Quick Comparison:**")
-                modes_data = {
-                    'Mode': ['Sea Freight', 'Air Freight', 'Rail Freight'],
-                    'Total Cost ($)': [f"{sea_total:,.0f}", f"{air_total:,.0f}", f"{rail_total:,.0f}"],
-                    'Days': [sea_days, air_days, rail_days],
-                    'Cost per kg ($)': [f"{sea_total/total_kg:.2f}", f"{air_total/total_kg:.2f}", f"{rail_total/total_kg:.2f}"]
-                }
-                st.table(modes_data)
-                
-                # Save comparison results
-                comparison_result = f"Transport Comparison - Sea: ${sea_total:,.0f} ({sea_days}d), Air: ${air_total:,.0f} ({air_days}d), Rail: ${rail_total:,.0f} ({rail_days}d)"
-                if st.button("Save Transportation Analysis"):
-                    save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
-                    st.success("Analysis saved!")
+                    
+                    st.markdown("**Cost Calculations:**")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Sea Total Cost", f"${sea_total:,.0f}")
+                        st.metric("Sea Cost per kg", f"${sea_total/total_kg:.2f}")
+                    with col2:
+                        st.metric("Air Total Cost", f"${air_total:,.0f}")
+                        st.metric("Air Cost per kg", f"${air_total/total_kg:.2f}")
+                    with col3:
+                        st.metric("Rail Total Cost", f"${rail_total:,.0f}")
+                        st.metric("Rail Cost per kg", f"${rail_total/total_kg:.2f}")
+                    
+                    # Editable Trade-off Matrix
+                    st.markdown("---")
+                    st.markdown("**Trade-off Analysis Matrix**")
+                    st.info("Rate each transportation mode on the factors below (1=Poor, 5=Excellent)")
+                    
+                    # Create editable matrix
+                    factors = ['Cost Efficiency', 'Speed', 'Reliability', 'Environmental Impact', 'Capacity']
+                    
+                    trade_off_data = {}
+                    for factor in factors:
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            sea_rating = st.selectbox(f"Sea - {factor}", options=[1,2,3,4,5], key=f"sea_{factor.replace(' ', '_').lower()}")
+                        with col2:
+                            air_rating = st.selectbox(f"Air - {factor}", options=[1,2,3,4,5], key=f"air_{factor.replace(' ', '_').lower()}")
+                        with col3:
+                            rail_rating = st.selectbox(f"Rail - {factor}", options=[1,2,3,4,5], key=f"rail_{factor.replace(' ', '_').lower()}")
+                        
+                        trade_off_data[factor] = {
+                            'Sea': sea_rating,
+                            'Air': air_rating,
+                            'Rail': rail_rating
+                        }
+                    
+                    # Display the completed matrix
+                    st.markdown("**Your Trade-off Matrix:**")
+                    import pandas as pd
+                    df_matrix = pd.DataFrame(trade_off_data).T
+                    st.dataframe(df_matrix)
+                    
+                    # Save comparison results
+                    comparison_result = f"Transport Comparison - Sea: ${sea_total:,.0f} ({sea_days}d), Air: ${air_total:,.0f} ({air_days}d), Rail: ${rail_total:,.0f} ({rail_days}d)"
+                    matrix_result = f"Trade-off Matrix: {trade_off_data}"
+                    combined_result = f"{comparison_result} | {matrix_result}"
+                    
+                    if st.button("Save Transportation Analysis"):
+                        save_answer(st.session_state.get('student_email', ''), 98, combined_result)
+                        st.success("Analysis saved!")
+                else:
+                    st.info("Please fill in all transportation research values to see calculations and trade-off matrix")
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
             # Assign a random disruption scenario to each student based on their email
