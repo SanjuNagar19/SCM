@@ -79,6 +79,7 @@ def record_query(email: str, tokens_used: int):
 SECTION_PDFS = {
     "Ch.3": "WHU_BSc_Fall 2024_session 3.pdf",
     "7-Eleven Case 2015": "7eleven case 2015.pdf",
+    "Dragon Fire Case": None,  # Interactive case study - no PDF needed
 }
 
 def extract_text_pymupdf(pdf_path: str) -> str:
@@ -438,6 +439,30 @@ def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3"
             f"Context: {best_chunk}\nAssignment Question: {assignment_context}\nStudent Query: {query}\nHint:"
         )
         
+        # Build section-specific system context
+        system_context = "You are a supply chain course assistant. Use the following context to give helpful hints for the assignment question, but do NOT solve it directly. " \
+                        "Encourage the student to think and guide them to the right concepts or formulas. " \
+                        "If the student asks for a solution, only provide hints and steps, not the final answer.\n"
+        
+        # Add section-specific knowledge
+        if section == "Dragon Fire Case":
+            system_context += (
+                "\nDragon Fire Case Context: Blue Dragon (Austria) is launching an energy drink in China's high-end market. "
+                "Key facts: 25 Yuan price point, coca leaf-based (not caffeine), powder shipped from Austria, "
+                "mixed with water in China, distributed to bars/clubs/restaurants. "
+                "Transportation options: Sea (30-35 days, $2-3k/container), Air (3-5 days, $8-12/kg), "
+                "Rail (18-25 days, $4-5k/container). Main Chinese ports: Shanghai, Ningbo, Shenzhen. "
+                "Consider: regulatory risks of coca leaf products, temperature sensitivity, premium market requirements, "
+                "supply chain disruptions (Suez Canal, port closures, etc.). Guide students through systematic analysis "
+                "of volume calculations, mode selection, risk management, and total cost optimization."
+            )
+        elif section == "7-Eleven Case 2015":
+            system_context += (
+                "\n7-Eleven Japan Context: 16,000 stores, 158 DCs, Combined Delivery System (CDS), "
+                "3 deliveries/day, 10 stores/truck, ¥50,000 per truck/run, 3 temperature zones, "
+                "65% fresh food share, ~3 hour DC-store lead time. Compare with US operations and DSD alternatives."
+            )
+        
         # Make API call with error handling and retries
         max_retries = 3
         for attempt in range(max_retries):
@@ -446,9 +471,7 @@ def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3"
                     model="gpt-3.5-turbo",
                     messages=[{
                         "role": "system", 
-                        "content": "You are a supply chain course assistant. Use the following context to give helpful hints for the assignment question, but do NOT solve it directly. "
-                        "Encourage the student to think and guide them to the right concepts or formulas. "
-                        "If the student asks for a solution, only provide hints and steps, not the final answer.\n"
+                        "content": system_context
                     }, {
                         "role": "user", 
                         "content": prompt
@@ -535,6 +558,19 @@ def get_assignment_questions(section: str = "Ch.3") -> List[str]:
             "Example validation code (for instructors or automated checks):\n```python\nstores_per_dc = 16000 / 158  # 101.27\njapan_cost = (50000 / 10) * 3  # 15000\nus_cost = (60000 / 8) * 1  # 7500\ndifference = japan_cost - us_cost  # 7500\nmulti_temp_cost = 3 * (50000 / 10) * 3  # 45000\n```",
 
             "Scoring guidance (summary):\n- Part 1: rubric 0–3 (concept clarity, links to framework).\n- Part 2: numeric auto-check for 2.1/2.2 plus written interpretation (rubric).\n- Part 3: relevance and correct use of case context in chatbot snippet + summary (rubric).\n- Part 4: strategic reasoning (rubric).\n\nPlease follow the question ordering when students submit; the admin grader UI will surface numeric fields for auto-checking if students label answers clearly."
+        ]
+    elif section == "Dragon Fire Case":
+        # Interactive supply chain design case
+        return [
+            "Phase 1: Product & Market Analysis\n\n🎯 **Your Mission**: Design the supply chain for Dragon Fire energy drink from Austria to China.\n\n**Case Background**: Blue Dragon (Austria) wants to launch Dragon Fire energy drink in China's high-end market (bars, clubs, restaurants). The product uses coca leaf powder (not caffeine) and sells for 25 Yuan (~3€) per drink.\n\n**Your Task**: Complete the product analysis:\n\n1. **Volume Estimation**: If Blue Dragon targets 1 million drinks in Year 1, and each drink needs 10g of powder, calculate:\n   - Total powder needed (kg)\n   - Estimated volume in cubic meters (powder density ≈ 0.5 kg/L)\n   - Number of standard shipping containers needed\n\n2. **Product Characteristics**: Identify 3 factors about the powder that will impact transportation choices (consider: shelf life, temperature sensitivity, regulatory restrictions, value density).\n\n3. **Market Strategy**: Why does starting with high-end venues (not supermarkets) affect the supply chain design? Consider order patterns, delivery requirements, and inventory needs.\n\n💡 **Tip**: Use the chatbot to explore questions like \"What are the logistics challenges of transporting coca leaf products internationally?\"",
+
+            "Phase 2: Transportation Mode Comparison\n\n📊 **Transportation Challenge**: Compare different ways to get Dragon Fire powder from Austria to China.\n\n**Available Options**:\n- **Sea Freight**: 30-35 days, $2,000-3,000 per container\n- **Air Freight**: 3-5 days, $8-12 per kg\n- **Rail Freight**: 18-25 days, $4,000-5,000 per container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. Show your work.\n\n2. **Trade-off Matrix**: Create a comparison table rating each mode (1-5 scale) on:\n   - Cost efficiency\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact\n\n3. **Mode Selection**: Choose your preferred transportation mode and justify with 3 specific reasons.\n\n4. **Route Planning**: For your chosen mode, identify the specific route (cities/ports) and estimate total transit time including customs clearance.\n\n💡 **Use the chatbot** to explore: \"What are the risks of shipping via the Suez Canal vs. overland routes to China?\"",
+
+            "Phase 3: Supply Chain Design\n\n🏗️ **Infrastructure Decisions**: Design your complete China operation.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle the drinks?\n   - Consider: labor costs, regulations, proximity to customers, water quality\n   - Identify 2-3 potential cities and rank them\n\n3. **Distribution Strategy**:\n   - How will finished drinks reach bars/clubs in major Chinese cities?\n   - Design your distribution network (regional hubs, direct delivery, etc.)\n   - Calculate approximate delivery radius and frequency\n\n4. **Inventory Planning**:\n   - How much safety stock of powder should you maintain?\n   - Where should inventory be held (port, factory, regional centers)?\n   - Consider seasonal demand variations and lead times\n\n**Deliverable**: Create a simple supply chain map showing: Austria production → transport → China port → mixing facility → distribution → end customers\n\n💡 **Chatbot exploration**: \"What are the advantages and disadvantages of locating a beverage mixing facility in different Chinese regions?\"",
+
+            "Phase 4: Risk Management & Scenario Planning\n\n⚠️ **Disruption Challenge**: Your supply chain faces real-world disruptions. How will you respond?\n\n**Scenario 1: Suez Canal Blockage**\nA major ship blocks the Suez Canal for 3 weeks (like Ever Given in 2021).\n- Impact on your sea freight shipments\n- Alternative routing options and additional costs\n- How to maintain supply to Chinese customers\n\n**Scenario 2: COVID-19 Port Closure**\nShanghai port closes for 2 weeks due to COVID outbreak.\n- Backup port options\n- Inventory management strategies\n- Customer communication plan\n\n**Scenario 3: Regulatory Challenge**\nChina suddenly restricts coca leaf imports pending safety review.\n- Immediate response actions\n- Product reformulation options\n- Timeline for market re-entry\n\n**Your Response Plan**:\nFor each scenario, provide:\n1. **Immediate Actions** (first 48 hours)\n2. **Short-term Mitigation** (1-4 weeks)\n3. **Long-term Adaptation** (1-6 months)\n4. **Cost Impact** (estimated additional costs)\n\n**Risk Prevention**:\nDesign 3 proactive measures to reduce vulnerability to these types of disruptions.\n\n💡 **Chatbot help**: \"What backup transportation options exist for urgent cargo from Europe to China during port closures?\"",
+
+            "Phase 5: Performance Optimization & Business Case\n\n📈 **Final Challenge**: Optimize your supply chain and present the business case.\n\n**Performance Metrics**:\nCalculate for your designed supply chain:\n\n1. **Total Cost Analysis**:\n   - Transportation cost per drink\n   - Warehousing and handling costs\n   - Inventory carrying costs\n   - Total landed cost in China\n\n2. **Time-to-Market**:\n   - Order-to-delivery cycle time\n   - Inventory turnover rate\n   - Cash-to-cash cycle time\n\n3. **Service Level**:\n   - Expected fill rate for customer orders\n   - On-time delivery percentage\n   - Flexibility to handle demand spikes\n\n**Optimization Opportunities**:\n\n1. **Volume Scaling**: How would your design change if demand grows to 5 million drinks/year?\n2. **Product Mix**: What if Blue Dragon adds a second product (different powder)?\n3. **Market Expansion**: How would you adapt for entering other Asian markets?\n\n**Business Presentation**:\nPrepare a 200-word executive summary covering:\n- Recommended supply chain design\n- Total investment required\n- Key performance expectations\n- Main risks and mitigation plans\n- Competitive advantages created\n\n**Reflection Questions**:\n1. What was the most challenging trade-off you had to make?\n2. How did disruption scenarios change your original design?\n3. What additional information would help you make better decisions?\n\n💡 **Final chatbot consultation**: \"How can supply chain design create competitive advantage for a premium beverage brand in China?\""
         ]
     else:
         # Default fallback

@@ -470,6 +470,99 @@ def assignment_page():
                     # Provide step hints without revealing exact expected numbers
                     st.info("Hint: For each country compute (cost per truck ÷ stores per truck) × deliveries per store/day to get the per-store/day cost, then compare the two results. Check your arithmetic and units.")
                 save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if passed else 'FAIL'}")
+    
+    # --- Dragon Fire Case Interactive Tools ---
+    elif st.session_state.get('selected_section') == 'Dragon Fire Case':
+        # Add interactive calculation tools for different phases
+        if current_idx == 0:  # Phase 1: Product & Market Analysis
+            st.info("💡 **Interactive Tools**: Use the calculators below to help with your analysis")
+            
+            with st.expander("📊 Volume & Container Calculator", expanded=True):
+                st.markdown("**Step 1: Calculate powder volume needed**")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    drinks_target = st.number_input("Target drinks (Year 1)", min_value=100000, max_value=10000000, value=1000000, step=100000)
+                    powder_per_drink = st.number_input("Powder per drink (grams)", min_value=5, max_value=50, value=10, step=1)
+                
+                with col2:
+                    powder_density = st.number_input("Powder density (kg/L)", min_value=0.3, max_value=0.8, value=0.5, step=0.1)
+                    container_volume = st.number_input("Container volume (m³)", min_value=60, max_value=80, value=67, step=1)
+                
+                # Calculations
+                total_powder_kg = (drinks_target * powder_per_drink) / 1000
+                total_volume_m3 = (total_powder_kg / powder_density) / 1000
+                containers_needed = total_volume_m3 / container_volume
+                
+                st.markdown("**Results:**")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Powder", f"{total_powder_kg:,.0f} kg")
+                with col2:
+                    st.metric("Volume Needed", f"{total_volume_m3:.1f} m³")
+                with col3:
+                    st.metric("Containers", f"{containers_needed:.1f}")
+                
+                # Save calculation results for grading
+                calc_result = f"Volume Calculator: {drinks_target:,} drinks → {total_powder_kg:,.0f} kg → {total_volume_m3:.1f} m³ → {containers_needed:.1f} containers"
+                if st.button("Save Volume Calculation"):
+                    save_answer(st.session_state.get('student_email', ''), 99, calc_result)  # Special index for calculations
+                    st.success("Calculation saved!")
+        
+        elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
+            st.info("🚢 **Transportation Cost Calculator**: Compare different shipping modes")
+            
+            with st.expander("💰 Mode Comparison Calculator", expanded=True):
+                # Get container count from previous calculation or let user input
+                containers = st.number_input("Number of containers to ship", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+                total_kg = st.number_input("Total weight (kg)", min_value=1000, max_value=50000, value=10000, step=1000)
+                
+                st.markdown("**Transportation Costs:**")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown("**🚢 Sea Freight**")
+                    sea_cost_per_container = st.number_input("Cost per container ($)", 2000, 5000, 2500, key="sea_cost")
+                    sea_days = st.number_input("Transit days", 25, 40, 32, key="sea_days")
+                    sea_total = containers * sea_cost_per_container
+                    st.metric("Total Cost", f"${sea_total:,.0f}")
+                    st.metric("Cost per kg", f"${sea_total/total_kg:.2f}")
+                
+                with col2:
+                    st.markdown("**✈️ Air Freight**")
+                    air_cost_per_kg = st.number_input("Cost per kg ($)", 6, 15, 10, key="air_cost")
+                    air_days = st.number_input("Transit days", 2, 7, 4, key="air_days")
+                    air_total = total_kg * air_cost_per_kg
+                    st.metric("Total Cost", f"${air_total:,.0f}")
+                    st.metric("Cost per kg", f"${air_total/total_kg:.2f}")
+                
+                with col3:
+                    st.markdown("**🚂 Rail Freight**")
+                    rail_cost_per_container = st.number_input("Cost per container ($)", 3000, 6000, 4500, key="rail_cost")
+                    rail_days = st.number_input("Transit days", 15, 30, 22, key="rail_days")
+                    rail_total = containers * rail_cost_per_container
+                    st.metric("Total Cost", f"${rail_total:,.0f}")
+                    st.metric("Cost per kg", f"${rail_total/total_kg:.2f}")
+                
+                # Comparison summary
+                st.markdown("---")
+                st.markdown("**📊 Quick Comparison:**")
+                modes_data = {
+                    'Mode': ['Sea Freight', 'Air Freight', 'Rail Freight'],
+                    'Total Cost ($)': [f"{sea_total:,.0f}", f"{air_total:,.0f}", f"{rail_total:,.0f}"],
+                    'Days': [sea_days, air_days, rail_days],
+                    'Cost per kg ($)': [f"{sea_total/total_kg:.2f}", f"{air_total/total_kg:.2f}", f"{rail_total/total_kg:.2f}"]
+                }
+                st.table(modes_data)
+                
+                # Save comparison results
+                comparison_result = f"Transport Comparison - Sea: ${sea_total:,.0f} ({sea_days}d), Air: ${air_total:,.0f} ({air_days}d), Rail: ${rail_total:,.0f} ({rail_days}d)"
+                if st.button("Save Transportation Analysis"):
+                    save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
+                    st.success("Analysis saved!")
+        
+        # For all Dragon Fire questions, also show the regular text area
+        answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
     else:
         # For all other questions, show the regular text area
         answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
