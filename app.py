@@ -371,46 +371,60 @@ def assignment_page():
     st.title("Supply Chain Learning")
     
     # Add collapsible sidebar recovery hint
-  
     
     st.markdown("---")
-    # Section selector (Chapter / Case study)
+    
+    # Section selector (Chapter / Case study) - Show first
     sections = get_available_sections()
     if 'selected_section' not in st.session_state:
         st.session_state['selected_section'] = sections[0] if sections else "Ch.3"
+    
     selected_section = st.selectbox("Select section:", options=sections, index=sections.index(st.session_state['selected_section']) if st.session_state['selected_section'] in sections else 0)
     st.session_state['selected_section'] = selected_section
+    
+    # If no section is selected or changed, show selection prompt
+    if not selected_section:
+        st.info("Please select a section to begin.")
+        return
+    
     st.caption(f"Current section: {selected_section}")
-    st.header("Assignment")
-    # Load questions for the selected section
-    questions = get_assignment_questions(selected_section)
-    # Load questions for the selected section
-    questions = get_assignment_questions(selected_section)
-    # If section changed since last visit, reset question index and clear chat
-    if st.session_state.get('last_section') != selected_section:
-        st.session_state['question_idx'] = 0
-        st.session_state['last_section'] = selected_section
-        # Clear chat history when changing sections
-        st.session_state['chat_history'] = []
-        st.session_state['user_question'] = ""
-        # Clear the chat input widget state
-        if "chat_input_unique" in st.session_state:
-            del st.session_state["chat_input_unique"]
-    # tell backend which section we're working with (used for DB queries)
-    import backend as _backend
-    _backend.save_answer.current_section = selected_section
-    _backend.save_chat.current_section = selected_section
-    _backend.save_grade.current_section = selected_section
-    _backend.get_answers_by_email.current_section = selected_section
-    _backend.get_chats_by_email.current_section = selected_section
-    _backend.get_grades_by_email.current_section = selected_section
-    _backend.get_latest_grade.current_section = selected_section
-    if 'question_idx' not in st.session_state:
-        st.session_state['question_idx'] = 0
-    num_questions = len(questions)
-    current_idx = st.session_state['question_idx']
-    assignment_context = questions[current_idx] if questions else ""
-    st.write(f"**Q{current_idx+1}:** {assignment_context}")
+    
+    # Section-specific content starts here
+    if selected_section:
+        st.header("Assignment")
+        
+        # Load questions for the selected section
+        questions = get_assignment_questions(selected_section)
+        
+        # If section changed since last visit, reset question index and clear chat
+        if st.session_state.get('last_section') != selected_section:
+            st.session_state['question_idx'] = 0
+            st.session_state['last_section'] = selected_section
+            # Clear chat history when changing sections
+            st.session_state['chat_history'] = []
+            st.session_state['user_question'] = ""
+            # Clear the chat input widget state
+            if "chat_input_unique" in st.session_state:
+                del st.session_state["chat_input_unique"]
+        
+        # tell backend which section we're working with (used for DB queries)
+        import backend as _backend
+        _backend.save_answer.current_section = selected_section
+        _backend.save_chat.current_section = selected_section
+        _backend.save_grade.current_section = selected_section
+        _backend.get_answers_by_email.current_section = selected_section
+        _backend.get_chats_by_email.current_section = selected_section
+        _backend.get_grades_by_email.current_section = selected_section
+        _backend.get_latest_grade.current_section = selected_section
+        
+        if 'question_idx' not in st.session_state:
+            st.session_state['question_idx'] = 0
+        
+        num_questions = len(questions)
+        current_idx = st.session_state['question_idx']
+        assignment_context = questions[current_idx] if questions else ""
+        
+        st.write(f"**Q{current_idx+1}:** {assignment_context}")
     # --- Auto-validation for 7-Eleven numeric tasks (only show on Part 2) ---
     if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
         # For Part 2 of 7-Eleven case, we use specific numeric inputs instead of the general text area
