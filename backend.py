@@ -35,6 +35,7 @@ def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 100, ma
     _config['max_queries_per_hour'] = max_queries
     _config['max_tokens_per_day'] = max_tokens
     openai.api_key = openai_key
+    logger.info(f"Configuration updated: max_queries={max_queries}, max_tokens={max_tokens}")
     logger.info("Configuration updated successfully")
 
 # Rate limiting storage

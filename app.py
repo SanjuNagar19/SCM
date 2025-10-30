@@ -33,12 +33,20 @@ def setup_config():
             admin_pw = st.secrets.get('ADMIN_PW', 'admin123')
             max_queries = st.secrets.get('MAX_QUERIES_PER_HOUR', 100)
             max_tokens = st.secrets.get('MAX_TOKENS_PER_DAY', 500000)
+            
+            # TEMPORARY: Force high limits for debugging
+            max_queries = 100
+            max_tokens = 500000
         else:
             # Fallback to environment variables (development)
             openai_key = os.getenv('OPENAI_API_KEY')
             admin_pw = os.getenv('ADMIN_PW', 'admin123')
             max_queries = int(os.getenv('MAX_QUERIES_PER_HOUR', '100'))
             max_tokens = int(os.getenv('MAX_TOKENS_PER_DAY', '500000'))
+            
+            # TEMPORARY: Force high limits for debugging
+            max_queries = 100
+            max_tokens = 500000
         
         if not openai_key:
             st.error("OpenAI API key not configured. Please set up Streamlit secrets or environment variables.")
@@ -46,6 +54,7 @@ def setup_config():
         
         # Configure backend
         set_config(openai_key, admin_pw, max_queries, max_tokens)
+        st.write(f"🔧 Debug: Configured with max_tokens={max_tokens}, max_queries={max_queries}")
         
     except Exception as e:
         st.error(f"Configuration error: {e}")
