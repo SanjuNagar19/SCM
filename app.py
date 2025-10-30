@@ -377,131 +377,131 @@ def assignment_page():
     # Section selector (Chapter / Case study) - Show first
     sections = get_available_sections()
     if 'selected_section' not in st.session_state:
-        st.session_state['selected_section'] = sections[0] if sections else "Ch.3"
+        st.session_state['selected_section'] = ""  # Start with no selection
     
-    selected_section = st.selectbox("Select section:", options=sections, index=sections.index(st.session_state['selected_section']) if st.session_state['selected_section'] in sections else 0)
-    st.session_state['selected_section'] = selected_section
+    selected_section = st.selectbox("Select section:", options=[""] + sections, index=0 if not st.session_state['selected_section'] else sections.index(st.session_state['selected_section']) + 1 if st.session_state['selected_section'] in sections else 0)
     
-    # If no section is selected or changed, show selection prompt
+    # If no section is selected, show selection prompt
     if not selected_section:
-        st.info("Please select a section to begin.")
+        st.info("👆 Please select a section above to begin working on assignments.")
         return
     
+    # Update session state with selection
+    st.session_state['selected_section'] = selected_section
     st.caption(f"Current section: {selected_section}")
     
     # Section-specific content starts here
-    if selected_section:
-        st.header("Assignment")
-        
-        # Load questions for the selected section
-        questions = get_assignment_questions(selected_section)
-        
-        # If section changed since last visit, reset question index and clear chat
-        if st.session_state.get('last_section') != selected_section:
-            st.session_state['question_idx'] = 0
-            st.session_state['last_section'] = selected_section
-            # Clear chat history when changing sections
-            st.session_state['chat_history'] = []
-            st.session_state['user_question'] = ""
-            # Clear the chat input widget state
-            if "chat_input_unique" in st.session_state:
-                del st.session_state["chat_input_unique"]
-        
-        # tell backend which section we're working with (used for DB queries)
-        import backend as _backend
-        _backend.save_answer.current_section = selected_section
-        _backend.save_chat.current_section = selected_section
-        _backend.save_grade.current_section = selected_section
-        _backend.get_answers_by_email.current_section = selected_section
-        _backend.get_chats_by_email.current_section = selected_section
-        _backend.get_grades_by_email.current_section = selected_section
-        _backend.get_latest_grade.current_section = selected_section
-        
-        if 'question_idx' not in st.session_state:
-            st.session_state['question_idx'] = 0
-        
-        num_questions = len(questions)
-        current_idx = st.session_state['question_idx']
-        assignment_context = questions[current_idx] if questions else ""
-        
-        st.write(f"**Q{current_idx+1}:** {assignment_context}")
+    st.header("Assignment")
+    
+    # Load questions for the selected section
+    questions = get_assignment_questions(selected_section)
+    
+    # If section changed since last visit, reset question index and clear chat
+    if st.session_state.get('last_section') != selected_section:
+        st.session_state['question_idx'] = 0
+        st.session_state['last_section'] = selected_section
+        # Clear chat history when changing sections
+        st.session_state['chat_history'] = []
+        st.session_state['user_question'] = ""
+        # Clear the chat input widget state
+        if "chat_input_unique" in st.session_state:
+            del st.session_state["chat_input_unique"]
+    
+    # tell backend which section we're working with (used for DB queries)
+    import backend as _backend
+    _backend.save_answer.current_section = selected_section
+    _backend.save_chat.current_section = selected_section
+    _backend.save_grade.current_section = selected_section
+    _backend.get_answers_by_email.current_section = selected_section
+    _backend.get_chats_by_email.current_section = selected_section
+    _backend.get_grades_by_email.current_section = selected_section
+    _backend.get_latest_grade.current_section = selected_section
+    
+    if 'question_idx' not in st.session_state:
+        st.session_state['question_idx'] = 0
+    
+    num_questions = len(questions)
+    current_idx = st.session_state['question_idx']
+    assignment_context = questions[current_idx] if questions else ""
+    
+    st.write(f"**Q{current_idx+1}:** {assignment_context}")
+    
     # --- Auto-validation for 7-Eleven numeric tasks (only show on Part 2) ---
     if st.session_state.get('selected_section') == '7-Eleven Case 2015' and current_idx == 1:
-        # For Part 2 of 7-Eleven case, we use specific numeric inputs instead of the general text area
-        st.info("**Part 2 - Quantitative Analysis**: Use the numeric validation tools below instead of the text area.")
-        
-        with st.expander("Auto-validate numeric tasks (Part 2)", expanded=True):
-            st.write("Enter your numeric answers below for automatic checking.")
+            # For Part 2 of 7-Eleven case, we use specific numeric inputs instead of the general text area
+            st.info("**Part 2 - Quantitative Analysis**: Use the numeric validation tools below instead of the text area.")
             
-            # Validation status indicators
-            col_status1, col_status2 = st.columns(2)
-            with col_status1:
-                if st.session_state.get('auto_2_1_pass', False):
-                    st.success("Task 2.1 - Validated")
-                else:
-                    st.warning("Task 2.1 - Pending validation")
-            with col_status2:
-                if st.session_state.get('auto_2_2_pass', False):
-                    st.success("Task 2.2 - Validated")
-                else:
-                    st.warning("Task 2.2 - Pending validation")
-            
-            st.markdown("---")
-            
-            # Task 2.1 – DC Utilization
-            val_2_1 = st.number_input("Task 2.1 - Average stores per DC", value=0.0, format="%.2f", key="auto_2_1")
-            if st.button("Check Task 2.1"):
-                expected_2_1 = 16000 / 158
-                tol_2_1 = 2
-                diff = abs(val_2_1 - expected_2_1)
-                passed = diff <= tol_2_1
-                if passed:
-                    st.success(f"Task 2.1 OK — your {val_2_1:.2f} is within ±{tol_2_1} of the expected range.")
-                    st.session_state['auto_2_1_pass'] = True
-                else:
-                    # Provide a hint without revealing the expected value
-                    st.info("Hint: compute average stores per DC by dividing total stores by number of DCs (i.e. total stores ÷ DCs). Check your division and rounding.")
-                # save numeric answer as text for this question
-                save_answer(st.session_state.get('student_email', ''), current_idx, f"2.1:{val_2_1:.2f} -> {'PASS' if passed else 'FAIL'}")
+            with st.expander("Auto-validate numeric tasks (Part 2)", expanded=True):
+                st.write("Enter your numeric answers below for automatic checking.")
+                
+                # Validation status indicators
+                col_status1, col_status2 = st.columns(2)
+                with col_status1:
+                    if st.session_state.get('auto_2_1_pass', False):
+                        st.success("Task 2.1 - Validated")
+                    else:
+                        st.warning("Task 2.1 - Pending validation")
+                with col_status2:
+                    if st.session_state.get('auto_2_2_pass', False):
+                        st.success("Task 2.2 - Validated")
+                    else:
+                        st.warning("Task 2.2 - Pending validation")
+                
+                st.markdown("---")
+                
+                # Task 2.1 – DC Utilization
+                val_2_1 = st.number_input("Task 2.1 - Average stores per DC", value=0.0, format="%.2f", key="auto_2_1")
+                if st.button("Check Task 2.1"):
+                    expected_2_1 = 16000 / 158
+                    tol_2_1 = 2
+                    diff = abs(val_2_1 - expected_2_1)
+                    passed = diff <= tol_2_1
+                    if passed:
+                        st.success(f"Task 2.1 OK — your {val_2_1:.2f} is within ±{tol_2_1} of the expected range.")
+                        st.session_state['auto_2_1_pass'] = True
+                    else:
+                        # Provide a hint without revealing the expected value
+                        st.info("Hint: compute average stores per DC by dividing total stores by number of DCs (i.e. total stores ÷ DCs). Check your division and rounding.")
+                    # save numeric answer as text for this question
+                    save_answer(st.session_state.get('student_email', ''), current_idx, f"2.1:{val_2_1:.2f} -> {'PASS' if passed else 'FAIL'}")
 
-            # Task 2.2 – Daily Delivery Cost per Store (Japan vs US)
-            st.write("Task 2.2 - Enter Japan cost per store/day and US cost per store/day")
-            val_japan = st.number_input("Japan cost (¥)", value=0.0, format="%.2f", key="auto_2_2_japan")
-            val_us = st.number_input("US cost (¥)", value=0.0, format="%.2f", key="auto_2_2_us")
-            if st.button("Check Task 2.2"):
-                expected_japan = (50000 / 10) * 3
-                expected_us = (60000 / 8) * 1
-                expected_diff = expected_japan - expected_us
-                tol_yen = 500
-                diff_j = abs(val_japan - expected_japan)
-                diff_u = abs(val_us - expected_us)
-                diff_diff = abs((val_japan - val_us) - expected_diff)
-                passed = (diff_j <= tol_yen) and (diff_u <= tol_yen) and (diff_diff <= tol_yen)
-                if passed:
-                    st.success("Task 2.2 OK — your values are within the acceptable tolerance.")
-                    st.session_state['auto_2_2_pass'] = True
-                else:
-                    # Provide step hints without revealing exact expected numbers
-                    st.info("Hint: For each country compute (cost per truck ÷ stores per truck) × deliveries per store/day to get the per-store/day cost, then compare the two results. Check your arithmetic and units.")
-                save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if passed else 'FAIL'}")
+                # Task 2.2 – Daily Delivery Cost per Store (Japan vs US)
+                st.write("Task 2.2 - Enter Japan cost per store/day and US cost per store/day")
+                val_japan = st.number_input("Japan cost (¥)", value=0.0, format="%.2f", key="auto_2_2_japan")
+                val_us = st.number_input("US cost (¥)", value=0.0, format="%.2f", key="auto_2_2_us")
+                if st.button("Check Task 2.2"):
+                    expected_japan = (50000 / 10) * 3
+                    expected_us = (60000 / 8) * 1
+                    expected_diff = expected_japan - expected_us
+                    tol_yen = 500
+                    diff_j = abs(val_japan - expected_japan)
+                    diff_u = abs(val_us - expected_us)
+                    diff_diff = abs((val_japan - val_us) - expected_diff)
+                    if passed:
+                        st.success("Task 2.2 OK — your values are within the acceptable tolerance.")
+                        st.session_state['auto_2_2_pass'] = True
+                    else:
+                        # Provide step hints without revealing exact expected numbers
+                        st.info("Hint: For each country compute (cost per truck ÷ stores per truck) × deliveries per store/day to get the per-store/day cost, then compare the two results. Check your arithmetic and units.")
+                    save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if passed else 'FAIL'}")
     
     # --- Dragon Fire Case Interactive Tools ---
     elif st.session_state.get('selected_section') == 'Dragon Fire Case':
         # Add interactive calculation tools for different phases
         if current_idx == 0:  # Phase 1: Product & Market Analysis
-            
-            with st.expander("Volume & Container Calculator", expanded=True):
-                st.markdown("**Calculate powder volume and containers needed**")
-                st.info("Research and input appropriate values for density and container sizes")
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    drinks_target = st.number_input("Target drinks (Year 1)", min_value=1, value=None, placeholder="Enter target drinks")
-                    powder_per_drink = st.number_input("Powder per drink (grams)", min_value=1, value=None, placeholder="Enter grams per drink")
-                
-                with col2:
-                    powder_density = st.number_input("Powder density (kg/L)", min_value=0.1, max_value=2.0, value=None, placeholder="Research and enter density")
-                    container_volume = st.number_input("Container volume (m³)", min_value=1, max_value=100, value=None, placeholder="Research container sizes")
+                with st.expander("Volume & Container Calculator", expanded=True):
+                    st.markdown("**Calculate powder volume and containers needed**")
+                    st.info("Research and input appropriate values for density and container sizes")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        drinks_target = st.number_input("Target drinks (Year 1)", min_value=1, value=None, placeholder="Enter target drinks")
+                        powder_per_drink = st.number_input("Powder per drink (grams)", min_value=1, value=None, placeholder="Enter grams per drink")
+                    
+                    with col2:
+                        powder_density = st.number_input("Powder density (kg/L)", min_value=0.1, max_value=2.0, value=None, placeholder="Research and enter density")
+                        container_volume = st.number_input("Container volume (m³)", min_value=1, max_value=100, value=None, placeholder="Research container sizes")
                 
                 # Only show calculations if all values are provided
                 if drinks_target and powder_per_drink and powder_density and container_volume:
@@ -636,12 +636,9 @@ def assignment_page():
             if st.button("Confirm Scenario Assignment"):
                 save_answer(st.session_state.get('student_email', ''), 97, scenario_result)
                 st.success(f"Scenario assigned: {assigned_scenario['title']}")
-        
-        # For all Dragon Fire questions, also show the regular text area
-        answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
-    else:
-        # For all other questions, show the regular text area
-        answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
+    
+    # For all sections, show the regular text area for answers
+    answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
     
     col1, col2 = st.columns(2)
     with col1:
