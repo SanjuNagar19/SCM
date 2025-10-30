@@ -14,6 +14,8 @@ from backend import (
     get_all_submissions,
     get_chats_by_email,
     set_config,
+    clear_rate_limits,
+    get_rate_limit_status,
 )
 import pandas as pd
 import os
@@ -337,6 +339,22 @@ if not st.session_state.get('admin_logged_in'):
 # --- Student Info Page ---
 def student_info_page():
     st.title("Supply Chain Learning")
+    
+    # Debug section - show token status
+    with st.expander("🔧 Debug Info (Token Usage)", expanded=False):
+        email = st.session_state.get('student_email', '')
+        if email:
+            try:
+                status = get_rate_limit_status(email)
+                st.json(status)
+                if st.button("Clear Rate Limits (Debug)"):
+                    clear_rate_limits(email)
+                    st.success("Rate limits cleared!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Debug error: {e}")
+        else:
+            st.info("Enter email first to see rate limit status")
     
     # Add sidebar hint
  
