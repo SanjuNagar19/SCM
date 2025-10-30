@@ -23,11 +23,11 @@ load_dotenv()
 _config = {
     'openai_api_key': None,
     'admin_password': None,
-    'max_queries_per_hour': 500,
-    'max_tokens_per_day': 100000
+    'max_queries_per_hour': 100,
+    'max_tokens_per_day': 500000
 }
 
-def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 500, max_tokens: int = 100000):
+def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 100, max_tokens: int = 500000):
     """Set configuration from Streamlit secrets or environment variables"""
     global _config
     _config['openai_api_key'] = openai_key
@@ -75,6 +75,38 @@ def record_query(email: str, tokens_used: int):
         if email not in _user_queries:
             _user_queries[email] = []
         _user_queries[email].append((datetime.utcnow(), tokens_used))
+
+def clear_rate_limits(email: str = None):
+    """Clear rate limiting data - for testing/admin purposes"""
+    with _rate_limit_lock:
+        if email:
+            _user_queries.pop(email, None)
+        else:
+            _user_queries.clear()
+    logger.info(f"Rate limits cleared for {'all users' if not email else email}")
+
+def get_rate_limit_status(email: str) -> dict:
+    """Get current rate limit status for debugging"""
+    with _rate_limit_lock:
+        if email not in _user_queries:
+            return {"queries_today": 0, "tokens_today": 0, "queries_hour": 0}
+        
+        current_time = datetime.utcnow()
+        hour_ago = current_time - timedelta(hours=1)
+        day_ago = current_time - timedelta(days=1)
+        
+        user_history = _user_queries[email]
+        recent_queries = [ts for ts, _ in user_history if ts > hour_ago]
+        daily_tokens = sum(tokens for ts, tokens in user_history if ts > day_ago)
+        total_queries = len([ts for ts, _ in user_history if ts > day_ago])
+        
+        return {
+            "queries_hour": len(recent_queries),
+            "queries_today": total_queries,
+            "tokens_today": daily_tokens,
+            "max_queries_hour": _config['max_queries_per_hour'],
+            "max_tokens_day": _config['max_tokens_per_day']
+        }
 # Map logical sections to PDF files in the repo. Add new PDFs to this map as needed.
 SECTION_PDFS = {
     "Ch.3": "WHU_BSc_Fall 2024_session 3.pdf",

@@ -29,14 +29,14 @@ def setup_config():
         if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
             openai_key = st.secrets['OPENAI_API_KEY']
             admin_pw = st.secrets.get('ADMIN_PW', 'admin123')
-            max_queries = st.secrets.get('MAX_QUERIES_PER_HOUR', 10)
-            max_tokens = st.secrets.get('MAX_TOKENS_PER_DAY', 50000)
+            max_queries = st.secrets.get('MAX_QUERIES_PER_HOUR', 100)
+            max_tokens = st.secrets.get('MAX_TOKENS_PER_DAY', 500000)
         else:
             # Fallback to environment variables (development)
             openai_key = os.getenv('OPENAI_API_KEY')
             admin_pw = os.getenv('ADMIN_PW', 'admin123')
-            max_queries = int(os.getenv('MAX_QUERIES_PER_HOUR', '10'))
-            max_tokens = int(os.getenv('MAX_TOKENS_PER_DAY', '50000'))
+            max_queries = int(os.getenv('MAX_QUERIES_PER_HOUR', '100'))
+            max_tokens = int(os.getenv('MAX_TOKENS_PER_DAY', '500000'))
         
         if not openai_key:
             st.error("OpenAI API key not configured. Please set up Streamlit secrets or environment variables.")
