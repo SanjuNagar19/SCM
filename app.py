@@ -696,7 +696,18 @@ def assignment_page():
                 save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
                 
                 st.success(" **Assignment Submitted Successfully!**")
-                st.balloons()
+                
+                # Supply chain celebration visual
+                st.markdown("""
+                <div style="text-align: center; padding: 20px; font-size: 24px;">
+                    🏭 ➡️ 🚛 ➡️ 📦 ➡️ 🏪 ➡️ 👥
+                    <br>
+                    <span style="font-size: 16px; color: #666;">Supplier → Transport → Warehouse → Retailer → Customer</span>
+                    <br>
+                    <span style="font-size: 18px; color: #054696;">✅ Supply Chain Learning Complete! ✅</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
                 st.info("**What's next:**\n- Review your answers using the Previous button\n- Use the chatbot for any final questions\n- End your session using the logout button below")
                 
                 # Optional: Mark assignment as completed
@@ -725,7 +736,15 @@ def assignment_page():
         # Assignment completion status
         if st.session_state.get('question_idx', 0) >= len(get_assignment_questions(st.session_state.get('selected_section', 'Ch.3'))):
             st.success("Assignment completed!")
-            st.balloons()
+            
+            # Supply chain completion visual
+            st.markdown("""
+            <div style="text-align: center; padding: 15px; font-size: 20px;">
+                🎯 📊 ✅ 
+                <br>
+                <span style="font-size: 14px; color: #054696;">All questions completed successfully!</span>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Logout button
         if st.button("End Session & Logout", type="primary"):
@@ -744,7 +763,16 @@ def assignment_page():
                     del st.session_state[key]
             
             st.success("Successfully logged out!")
-            st.balloons()
+            
+            # Professional goodbye visual
+            st.markdown("""
+            <div style="text-align: center; padding: 15px; font-size: 18px;">
+                📚 🎓 👋
+                <br>
+                <span style="font-size: 14px; color: #054696;">Thank you for learning with us!</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
             time.sleep(1)
             st.rerun()
         
