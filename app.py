@@ -29,24 +29,35 @@ def setup_config():
     try:
         # Try to get from Streamlit secrets first (production)
         if hasattr(st, 'secrets') and 'OPENAI_API_KEY' in st.secrets:
+            st.write("🔍 DEBUG: Using Streamlit secrets")
             openai_key = st.secrets['OPENAI_API_KEY']
             admin_pw = st.secrets.get('ADMIN_PW', 'admin123')
             max_queries = st.secrets.get('MAX_QUERIES_PER_HOUR', 100)
             max_tokens = st.secrets.get('MAX_TOKENS_PER_DAY', 500000)
             
-            # TEMPORARY: Force high limits for debugging
-            max_queries = 100
-            max_tokens = 500000
-        else:
-            # Fallback to environment variables (development)
-            openai_key = os.getenv('OPENAI_API_KEY')
-            admin_pw = os.getenv('ADMIN_PW', 'admin123')
-            max_queries = int(os.getenv('MAX_QUERIES_PER_HOUR', '100'))
-            max_tokens = int(os.getenv('MAX_TOKENS_PER_DAY', '500000'))
+            st.write(f"🔍 DEBUG: Secrets - max_queries={max_queries}, max_tokens={max_tokens}")
             
             # TEMPORARY: Force high limits for debugging
             max_queries = 100
             max_tokens = 500000
+            st.write(f"🔍 DEBUG: After override - max_queries={max_queries}, max_tokens={max_tokens}")
+        else:
+            st.write("🔍 DEBUG: Using environment variables")
+            # Fallback to environment variables (development)
+            openai_key = os.getenv('OPENAI_API_KEY')
+            admin_pw = os.getenv('ADMIN_PW', 'admin123')
+            max_queries_env = os.getenv('MAX_QUERIES_PER_HOUR', '100')
+            max_tokens_env = os.getenv('MAX_TOKENS_PER_DAY', '500000')
+            
+            st.write(f"🔍 DEBUG: Env vars - MAX_QUERIES_PER_HOUR={max_queries_env}, MAX_TOKENS_PER_DAY={max_tokens_env}")
+            
+            max_queries = int(max_queries_env)
+            max_tokens = int(max_tokens_env)
+            
+            # TEMPORARY: Force high limits for debugging
+            max_queries = 100
+            max_tokens = 500000
+            st.write(f"🔍 DEBUG: After override - max_queries={max_queries}, max_tokens={max_tokens}")
         
         if not openai_key:
             st.error("OpenAI API key not configured. Please set up Streamlit secrets or environment variables.")
