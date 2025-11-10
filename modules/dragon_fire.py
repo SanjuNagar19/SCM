@@ -273,6 +273,16 @@ def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder
     volume_utilization = (total_volume_m3 / containers_needed / container_volume) * 100
     
     return {
+        # Backward compatibility - flat structure for existing app.py
+        "total_powder_kg": round(total_powder_kg, 2),
+        "total_volume_m3": round(total_volume_m3, 3),
+        "containers_needed": round(containers_needed, 2),
+        "containers_by_weight": round(containers_by_weight, 2),
+        "containers_by_volume": round(containers_by_volume, 2),
+        "limiting_factor": limiting_factor,
+        "powder_density_used": powder_density_kg_m3,
+        
+        # Enhanced structure for future use
         "inputs": {
             "drinks_target": drinks_target,
             "powder_per_drink_grams": powder_per_drink,
