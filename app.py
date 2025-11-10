@@ -596,8 +596,12 @@ def assignment_page():
                 save_answer(st.session_state.get('student_email', ''), 97, scenario_result)
                 st.success(f"Scenario assigned: {assigned_scenario['title']}")
     
-    # For all sections, show the regular text area for answers
-    answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
+    # For all sections except Dragon Fire Case Phase 1 Q1, show the regular text area for answers
+    if not (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 0):
+        answer_box = st.text_area(f"Your answer to Q{current_idx+1}", key=f"ans_{current_idx}")
+    else:
+        # For Dragon Fire Phase 1 Q1, no text box - students use the calculator above
+        answer_box = ""  # Empty string to maintain variable consistency
     
     col1, col2 = st.columns(2)
     with col1:

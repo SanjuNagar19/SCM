@@ -237,6 +237,75 @@ def get_container_specifications_display() -> Dict[str, Any]:
         ]
     }
 
+def validate_student_container_research(weight_capacity_kg: float, volume_capacity_m3: float) -> Dict[str, Any]:
+    """Validate student's container research against standard specifications"""
+    standard_specs = get_container_specifications()["capacity"]
+    
+    # Reasonable ranges based on real container specifications
+    weight_range = {"min": 20000, "max": 30000, "typical_min": 24000, "typical_max": 27000}
+    volume_range = {"min": 50, "max": 80, "typical_min": 58, "typical_max": 68}
+    
+    weight_reasonable = weight_range["min"] <= weight_capacity_kg <= weight_range["max"]
+    volume_reasonable = volume_range["min"] <= volume_capacity_m3 <= volume_range["max"]
+    
+    weight_typical = weight_range["typical_min"] <= weight_capacity_kg <= weight_range["typical_max"]
+    volume_typical = volume_range["typical_min"] <= volume_capacity_m3 <= volume_range["typical_max"]
+    
+    return {
+        "weight_analysis": {
+            "value": weight_capacity_kg,
+            "reasonable": weight_reasonable,
+            "typical": weight_typical,
+            "feedback": get_weight_feedback(weight_capacity_kg, weight_range),
+            "standard_reference": standard_specs["max_payload_kg"]
+        },
+        "volume_analysis": {
+            "value": volume_capacity_m3,
+            "reasonable": volume_reasonable,
+            "typical": volume_typical,
+            "feedback": get_volume_feedback(volume_capacity_m3, volume_range),
+            "standard_reference": standard_specs["max_volume_m3"]
+        },
+        "overall_quality": {
+            "both_reasonable": weight_reasonable and volume_reasonable,
+            "both_typical": weight_typical and volume_typical,
+            "research_score": calculate_research_score(weight_reasonable, volume_reasonable, weight_typical, volume_typical)
+        }
+    }
+
+def get_weight_feedback(weight_kg: float, weight_range: Dict[str, float]) -> str:
+    """Generate feedback for weight capacity research"""
+    if weight_kg < weight_range["min"]:
+        return "Too low - Check for maximum payload capacity, not container weight"
+    elif weight_kg > weight_range["max"]:
+        return "Too high - This exceeds typical container weight limits"
+    elif weight_range["typical_min"] <= weight_kg <= weight_range["typical_max"]:
+        return "Excellent - This is within typical range for 40ft containers"
+    else:
+        return "Acceptable - Consider checking multiple shipping line specifications"
+
+def get_volume_feedback(volume_m3: float, volume_range: Dict[str, float]) -> str:
+    """Generate feedback for volume capacity research"""
+    if volume_m3 < volume_range["min"]:
+        return "Too low - Check if you found standard container vs high cube"
+    elif volume_m3 > volume_range["max"]:
+        return "Too high - This exceeds typical container volumes"
+    elif volume_range["typical_min"] <= volume_m3 <= volume_range["typical_max"]:
+        return "Excellent - Correct range for 40ft containers"
+    else:
+        return "Acceptable - Consider standard (58m³) vs high cube (67m³) containers"
+
+def calculate_research_score(weight_reasonable: bool, volume_reasonable: bool, weight_typical: bool, volume_typical: bool) -> str:
+    """Calculate overall research quality score"""
+    if weight_typical and volume_typical:
+        return "A - Excellent research with typical values"
+    elif weight_reasonable and volume_reasonable:
+        return "B - Good research within acceptable ranges"
+    elif weight_reasonable or volume_reasonable:
+        return "C - Partial success, review the other specification"
+    else:
+        return "D - Please review your research sources"
+
 def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float, container_weight_capacity: float = None) -> Dict[str, Any]:
     """Calculate volume metrics for Phase 1 - backward compatible with existing app calls
     

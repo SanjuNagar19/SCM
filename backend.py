@@ -109,6 +109,22 @@ def get_container_specifications_display() -> Dict[str, Any]:
     """Get detailed container specifications for research"""
     return dragon_fire.get_container_specifications_display()
 
+def save_student_container_research(student_email: str, weight_capacity_kg: float, volume_capacity_m3: float, research_notes: str = "") -> Dict[str, Any]:
+    """Save and validate student's container research for learning assessment"""
+    validation = dragon_fire.validate_student_container_research(weight_capacity_kg, volume_capacity_m3)
+    
+    return {
+        "student_email": student_email,
+        "researched_weight_capacity_kg": weight_capacity_kg,
+        "researched_volume_capacity_m3": volume_capacity_m3,
+        "research_notes": research_notes,
+        "validation": validation
+    }
+
+def validate_container_research(weight_capacity_kg: float, volume_capacity_m3: float) -> Dict[str, Any]:
+    """Validate student's container research and provide feedback"""
+    return dragon_fire.validate_student_container_research(weight_capacity_kg, volume_capacity_m3)
+
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
     """Calculate transportation costs for Dragon Fire Phase 2"""
     return dragon_fire.calculate_transport_costs(containers, total_kg, costs)
