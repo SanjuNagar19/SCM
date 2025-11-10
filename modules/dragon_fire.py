@@ -12,7 +12,7 @@ def get_assignment_questions() -> List[str]:
         "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n"
         "2. Aparrt from weight, volume is also essential, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
 
-        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: Using your results from Phase 1 (containers needed, total weight, total volume), calculate the transportation cost for each mode. You also need to make a reasonable assumption for the cost of capital (WACC) to account for inventory tied up during transit.\n\n2. **Mode Evaluation**: Based on the following factors, choose your preferred transportation mode and justify with 3 specific reasons:\n   - Cost\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact\n\n**Guidance for Cost of Capital (WACC)**:\n- Startup companies typically have WACC of 12-20%\n- Consider your powder value (production cost + margin)\n- Calculate daily cost: (Annual WACC ÷ 365) × Inventory Value\n- Apply for transit duration of each mode",
+        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Input Your Phase 1 Results**: Enter your results from Phase 1:\n   - Number of containers needed\n   - Total weight (kg)\n   - Total volume (m³)\n   - Your WACC assumption (12-20% for startups)\n\n2. **Calculate and Compare**: Using the transportation rates above:\n   - Calculate transportation cost for each mode\n   - Calculate cost of capital (inventory holding cost during transit)\n   - Consider total cost = transportation cost + cost of capital\n\n3. **Mode Evaluation**: Evaluate each transportation mode based on:\n   - **Cost**: Total cost per kg\n   - **Speed to Market**: Time to reach customers\n   - **Reliability**: Service consistency and predictability\n   - **Risk Level**: Potential disruptions and vulnerabilities\n   - **Environmental Impact**: CO2 emissions and sustainability\n\n4. **Decision**: Choose your preferred transportation mode and justify with 3 specific reasons based on your analysis above.",
 
         "Phase 3: Supply Chain Design\n\nDesign your complete China operation for this startup market entry.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target bar/restaurant markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle/can the drinks?\n   - Consider: labor costs, regulations, proximity to bars/restaurants, water quality, startup budget constraints\n   - Identify 2-3 potential cities and rank them.",
 
@@ -415,17 +415,7 @@ def get_phase2_guidance() -> Dict[str, Any]:
                 "2. Choose annual WACC rate (12-20% for startups)",
                 "3. Calculate daily cost: (WACC ÷ 365) × Total Inventory Value",
                 "4. Multiply by transit days for each transportation mode"
-            ],
-            "example_calculation": {
-                "if_powder_value": "€12 per kg",
-                "if_total_weight": "10,000 kg",
-                "if_wacc": "15%",
-                "inventory_value": "€120,000",
-                "daily_cost": "€49.32",
-                "sea_capital_cost": "€1,479.60 (30 days)",
-                "air_capital_cost": "€147.96 (3 days)",
-                "rail_capital_cost": "€739.80 (15 days)"
-            }
+            ]
         },
         "evaluation_framework": {
             "cost": {
@@ -449,13 +439,19 @@ def get_phase2_guidance() -> Dict[str, Any]:
                 "questions": ["Does environmental impact matter for brand?", "Future regulations?"]
             }
         },
-        "decision_matrix_template": {
-            "instruction": "Rate each factor 1-5 for importance, then score each mode 1-10",
-            "factors": ["Cost", "Speed", "Reliability", "Risk", "Environment"],
-            "example_weighting": {
-                "startup_focus": {"cost": 5, "speed": 4, "reliability": 3, "risk": 4, "environment": 2},
-                "premium_brand": {"cost": 3, "speed": 4, "reliability": 5, "risk": 4, "environment": 4}
-            }
+        "analysis_instructions": {
+            "required_inputs": [
+                "Number of containers (from Phase 1)",
+                "Total weight in kg (from Phase 1)",
+                "Total volume in m³ (from Phase 1)",
+                "WACC rate assumption (12-20% for startups)"
+            ],
+            "student_task": [
+                "Calculate transportation costs for each mode using given rates",
+                "Calculate cost of capital based on your WACC assumption",
+                "Evaluate all modes against 5 factors: Cost, Speed, Reliability, Risk, Environment",
+                "Choose preferred mode with 3 specific justifications"
+            ]
         }
     }
 
@@ -463,8 +459,7 @@ def collect_phase2_inputs(
     containers: float,
     total_weight_kg: float, 
     total_volume_m3: float,
-    wacc_rate: float,
-    powder_value_per_kg: float = None
+    wacc_rate: float
 ) -> Dict[str, Any]:
     """Collect and validate Phase 2 inputs for student analysis"""
     
@@ -478,179 +473,36 @@ def collect_phase2_inputs(
         errors.append("Total volume must be positive")
     if not (0.05 <= wacc_rate <= 0.30):  # 5% to 30%
         errors.append("WACC rate should be between 5% and 30% (0.05 to 0.30)")
-    if powder_value_per_kg and powder_value_per_kg <= 0:
-        errors.append("Powder value per kg must be positive")
     
     return {
         "inputs": {
             "containers": containers,
             "total_weight_kg": total_weight_kg,
             "total_volume_m3": total_volume_m3, 
-            "wacc_rate": wacc_rate,
-            "powder_value_per_kg": powder_value_per_kg
+            "wacc_rate": wacc_rate
         },
         "validation": {
             "valid": len(errors) == 0,
             "errors": errors
         },
+        "transportation_rates": {
+            "sea_freight": "€400 per 40ft container, 30 days transit",
+            "air_freight": "€1.50 per kg, 3 days transit",
+            "rail_freight": "€3,000 per 40ft container, 15 days transit"
+        },
         "next_steps": [
-            "Use the transportation rates provided in the assignment",
+            "Calculate transportation cost for each mode using the given rates",
             "Calculate cost of capital based on your WACC assumption", 
-            "Consider all 5 evaluation factors in your analysis",
-            "Write your analysis and mode selection with justifications"
+            "Evaluate all modes against the 5 factors: Cost, Speed, Reliability, Risk, Environment",
+            "Choose your preferred transportation mode with 3 specific justifications"
         ]
     }
 
-def calculate_transport_costs_enhanced(
-    containers: float, 
-    total_kg: float, 
-    total_volume_m3: float,
-    powder_value_per_kg: float,
-    wacc_annual: float = 0.12  # Weighted Average Cost of Capital for startup
-) -> Dict[str, Any]:
-    """Enhanced transportation cost calculation with volume considerations and WACC"""
-    
-    # Fixed transportation costs and transit times (from assignment)
-    transport_rates = {
-        'sea': {'cost_per_container': 400, 'transit_days': 30},
-        'air': {'cost_per_kg': 1.50, 'transit_days': 3},
-        'rail': {'cost_per_container': 3000, 'transit_days': 15}
-    }
-    
-    # Calculate base transportation costs
-    sea_transport_cost = containers * transport_rates['sea']['cost_per_container']
-    air_transport_cost = total_kg * transport_rates['air']['cost_per_kg']
-    rail_transport_cost = containers * transport_rates['rail']['cost_per_container']
-    
-    # Calculate inventory value tied up during transit
-    total_inventory_value = total_kg * powder_value_per_kg
-    daily_wacc_cost = (wacc_annual / 365) * total_inventory_value
-    
-    # Cost of capital for each mode based on transit time
-    sea_capital_cost = daily_wacc_cost * transport_rates['sea']['transit_days']
-    air_capital_cost = daily_wacc_cost * transport_rates['air']['transit_days']
-    rail_capital_cost = daily_wacc_cost * transport_rates['rail']['transit_days']
-    
-    # Total costs (transport + cost of capital)
-    sea_total_cost = sea_transport_cost + sea_capital_cost
-    air_total_cost = air_transport_cost + air_capital_cost
-    rail_total_cost = rail_transport_cost + rail_capital_cost
-    
-    # Volume efficiency analysis
-    container_volume_capacity = 67.3  # m³ per 40ft container
-    volume_utilization = (total_volume_m3 / containers) / container_volume_capacity * 100
-    
-    return {
-        "input_parameters": {
-            "containers": round(containers, 2),
-            "total_weight_kg": round(total_kg, 2),
-            "total_volume_m3": round(total_volume_m3, 3),
-            "powder_value_per_kg": powder_value_per_kg,
-            "wacc_annual": wacc_annual,
-            "inventory_value": round(total_inventory_value, 2)
-        },
-        "transportation_costs": {
-            "sea_transport": round(sea_transport_cost, 2),
-            "air_transport": round(air_transport_cost, 2),
-            "rail_transport": round(rail_transport_cost, 2)
-        },
-        "cost_of_capital": {
-            "sea_capital": round(sea_capital_cost, 2),
-            "air_capital": round(air_capital_cost, 2),
-            "rail_capital": round(rail_capital_cost, 2),
-            "daily_wacc_cost": round(daily_wacc_cost, 2)
-        },
-        "total_costs": {
-            "sea_total": round(sea_total_cost, 2),
-            "air_total": round(air_total_cost, 2),
-            "rail_total": round(rail_total_cost, 2)
-        },
-        "cost_efficiency": {
-            "sea_per_kg": round(sea_total_cost / total_kg, 2),
-            "air_per_kg": round(air_total_cost / total_kg, 2),
-            "rail_per_kg": round(rail_total_cost / total_kg, 2),
-            "sea_per_m3": round(sea_total_cost / total_volume_m3, 2),
-            "air_per_m3": round(air_total_cost / total_volume_m3, 2),
-            "rail_per_m3": round(rail_total_cost / total_volume_m3, 2)
-        },
-        "volume_analysis": {
-            "volume_utilization_percent": round(volume_utilization, 1),
-            "containers_needed": round(containers, 2),
-            "volume_per_container": round(total_volume_m3 / containers, 2),
-            "container_capacity_m3": container_volume_capacity,
-            "unused_volume_per_container": round(container_volume_capacity - (total_volume_m3 / containers), 2)
-        },
-        "transit_analysis": {
-            "sea_days": transport_rates['sea']['transit_days'],
-            "air_days": transport_rates['air']['transit_days'],
-            "rail_days": transport_rates['rail']['transit_days'],
-            "time_value_difference": {
-                "air_vs_sea_savings": round(sea_capital_cost - air_capital_cost, 2),
-                "rail_vs_sea_savings": round(sea_capital_cost - rail_capital_cost, 2)
-            }
-        },
-        "evaluation_factors": {
-            "cost_ranking": get_cost_ranking(sea_total_cost, air_total_cost, rail_total_cost),
-            "speed_ranking": {
-                "fastest": f"Air ({transport_rates['air']['transit_days']} days)",
-                "medium": f"Rail ({transport_rates['rail']['transit_days']} days)",
-                "slowest": f"Sea ({transport_rates['sea']['transit_days']} days)"
-            },
-            "reliability_assessment": {
-                "sea": {"score": "Medium", "notes": "Weather dependent, port congestion risk"},
-                "air": {"score": "High", "notes": "Most reliable but capacity limited"},
-                "rail": {"score": "Medium-High", "notes": "Good reliability, infrastructure dependent"}
-            },
-            "risk_factors": {
-                "sea": ["Suez Canal disruption", "Port strikes", "Weather delays", "Piracy (rare)"],
-                "air": ["Limited cargo space", "Airport restrictions", "High cost volatility"],
-                "rail": ["Border delays", "Infrastructure issues", "Political tensions"]
-            },
-            "environmental_impact": {
-                "sea": {"score": "Best", "co2_rating": "Lowest emissions per kg"},
-                "rail": {"score": "Good", "co2_rating": "Medium emissions per kg"},
-                "air": {"score": "Poor", "co2_rating": "Highest emissions per kg"}
-            }
-        },
-        "startup_considerations": {
-            "cash_flow_impact": {
-                "sea": "Lowest upfront cost, longest cash cycle",
-                "rail": "Medium cost, medium cash cycle", 
-                "air": "Highest cost, shortest cash cycle"
-            },
-            "scalability": {
-                "sea": "Excellent for large volumes",
-                "rail": "Good for regular shipments",
-                "air": "Limited by capacity and cost"
-            },
-            "flexibility": {
-                "sea": "Low flexibility, long commitment",
-                "rail": "Medium flexibility",
-                "air": "High flexibility, quick adjustments possible"
-            }
-        }
-    }
-
-def get_cost_ranking(sea_cost: float, air_cost: float, rail_cost: float) -> Dict[str, str]:
-    """Rank transportation modes by total cost"""
-    costs = [
-        ("Sea", sea_cost),
-        ("Air", air_cost), 
-        ("Rail", rail_cost)
-    ]
-    costs.sort(key=lambda x: x[1])
-    
-    return {
-        "cheapest": f"{costs[0][0]} (€{costs[0][1]:,.2f})",
-        "medium": f"{costs[1][0]} (€{costs[1][1]:,.2f})",
-        "most_expensive": f"{costs[2][0]} (€{costs[2][1]:,.2f})"
-    }
-
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
-    """Calculate transportation costs for Phase 2"""
-    sea_total = containers * costs.get('sea_per_container', 0)
-    air_total = total_kg * costs.get('air_per_kg', 0)
-    rail_total = containers * costs.get('rail_per_container', 0)
+    """Simple transportation costs calculation - kept for backward compatibility"""
+    sea_total = containers * costs.get('sea_per_container', 400)  # Default €400
+    air_total = total_kg * costs.get('air_per_kg', 1.50)  # Default €1.50/kg
+    rail_total = containers * costs.get('rail_per_container', 3000)  # Default €3000
     
     return {
         "sea_total": sea_total,
