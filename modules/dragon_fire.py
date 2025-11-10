@@ -12,11 +12,11 @@ def get_assignment_questions() -> List[str]:
         "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n"
         "2. Aparrt from weight, volume is also essential, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
 
-        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. You also need to make a reasonable presumption for the cost of capital.\n\n2. **Mode Evaluation**: Based on the following factors, choose your preferred transportation mode and justify with 3 specific reasons:\n   - Cost\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact",
+        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: Using your results from Phase 1 (containers needed, total weight, total volume), calculate the transportation cost for each mode. You also need to make a reasonable assumption for the cost of capital (WACC) to account for inventory tied up during transit.\n\n2. **Mode Evaluation**: Based on the following factors, choose your preferred transportation mode and justify with 3 specific reasons:\n   - Cost\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact\n\n**Guidance for Cost of Capital (WACC)**:\n- Startup companies typically have WACC of 12-20%\n- Consider your powder value (production cost + margin)\n- Calculate daily cost: (Annual WACC ÷ 365) × Inventory Value\n- Apply for transit duration of each mode",
 
-        "Phase 3: Supply Chain Design\n\nDesign your complete China operation for this startup market entry.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target bar/restaurant markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle/can the drinks?\n   - Consider: labor costs, regulations, proximity to bars/restaurants, water quality, startup budget constraints\n   - Identify 2-3 potential cities and rank them\n\n3. **Distribution Strategy**:\n   - How will finished drinks reach bars/clubs/restaurants in major Chinese cities?\n   - Design your distribution network considering limited initial market (no supermarkets)\n   - Calculate approximate delivery radius and frequency for bar/restaurant channel\n\n4. **Inventory Planning for Startup**:\n   - How much safety stock should a startup maintain with unproven demand?\n   - Where should inventory be held (port, factory, regional centers)?\n   - Consider cash flow constraints and demand uncertainty\n\n**Deliverable**: Create a simple supply chain map showing: Germany production → transport → China port → mixing facility → distribution → bars/restaurants",
+        "Phase 3: Supply Chain Design\n\nDesign your complete China operation for this startup market entry.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target bar/restaurant markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle/can the drinks?\n   - Consider: labor costs, regulations, proximity to bars/restaurants, water quality, startup budget constraints\n   - Identify 2-3 potential cities and rank them.",
 
-        "Phase 4: Risk Management & Scenario Planning\n\nYour startup supply chain faces a real-world disruption. How will you respond?\n\n**Your Scenario**: You will be assigned one of three possible disruptions. Develop a comprehensive response plan for your assigned scenario.\n\n**Possible Disruptions**:\n1. **Suez Canal Blockage**: A major ship blocks the canal for 3 weeks (like Ever Given 2021)\n2. **Disease Outbreak**: All ports except the Shanghai port close for 2 weeks due to a disease outbreak\n3. **Regulatory Challenge**: China prohibits the import of sugar, which is contained in the powder, pending food safety review\n\n**Your Response Plan** (for your assigned disruption):\n1. **Immediate Actions** (first 48 hours) - consider startup's limited resources\n2. **Short-term Mitigation** (1-4 weeks) - cash flow and customer retention focus\n3. **Long-term Adaptation** (1-6 months) - strategic pivots for startup survival\n4. **Cost Impact** (estimated additional costs and impact on startup budget)\n\n**Risk Prevention**: Design 2 proactive measures to reduce vulnerability considering startup constraints and limited market presence."
+        "Phase 4: Risk Management & Scenario Planning\n\nYour startup supply chain faces a real-world disruption. How will you respond?\n\nDevelop a comprehensive response plan for the disruptive scenario given below.\n\n**Your Response Plan** (for your assigned disruption):\n1. **Immediate Actions** (first 48 hours) - consider startup's limited resources\n2. **Short-term Mitigation** (1-4 weeks) - cash flow and customer retention focus\n3. **Long-term Adaptation** (1-6 months) - strategic pivots for startup survival\n4. **Cost Impact** (estimated additional costs and impact on startup budget)\n\n**Risk Prevention**: Design 2 proactive measures to reduce vulnerability considering startup constraints and limited market presence."
     ]
 
 def get_disruption_scenarios() -> Dict[int, Dict[str, Any]]:
@@ -380,6 +380,81 @@ def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder
             "standard_reference": {
                 "standard_weight_capacity": container_specs["max_payload_kg"],
                 "standard_volume_capacity": container_specs["max_volume_m3"]
+            }
+        }
+    }
+
+def get_phase2_guidance() -> Dict[str, Any]:
+    """Provide guidance for Phase 2 transportation mode analysis"""
+    return {
+        "transportation_data": {
+            "sea_freight": {
+                "cost": "€400 per 40ft container",
+                "transit_time": "30 days",
+                "notes": "Most economical for large volumes"
+            },
+            "air_freight": {
+                "cost": "€1.50 per kg",
+                "transit_time": "3 days", 
+                "notes": "Fastest but most expensive"
+            },
+            "rail_freight": {
+                "cost": "€3,000 per 40ft container",
+                "transit_time": "15 days",
+                "notes": "Balance of cost and speed"
+            }
+        },
+        "wacc_guidance": {
+            "typical_ranges": {
+                "startup_wacc": "12-20% annually",
+                "established_company": "6-12% annually",
+                "recommended_assumption": "15% for Dragon Fire startup"
+            },
+            "calculation_steps": [
+                "1. Estimate your powder production cost per kg (€8-15 typical)",
+                "2. Choose annual WACC rate (12-20% for startups)",
+                "3. Calculate daily cost: (WACC ÷ 365) × Total Inventory Value",
+                "4. Multiply by transit days for each transportation mode"
+            ],
+            "example_calculation": {
+                "if_powder_value": "€12 per kg",
+                "if_total_weight": "10,000 kg",
+                "if_wacc": "15%",
+                "inventory_value": "€120,000",
+                "daily_cost": "€49.32",
+                "sea_capital_cost": "€1,479.60 (30 days)",
+                "air_capital_cost": "€147.96 (3 days)",
+                "rail_capital_cost": "€739.80 (15 days)"
+            }
+        },
+        "evaluation_framework": {
+            "cost": {
+                "factors": ["Transportation cost", "Cost of capital", "Total cost per kg"],
+                "questions": ["Which mode has lowest total cost?", "How sensitive to volume changes?"]
+            },
+            "speed_to_market": {
+                "factors": ["Transit time", "Market opportunity cost", "Customer expectations"],
+                "questions": ["How critical is launch timing?", "What's the cost of delay?"]
+            },
+            "reliability": {
+                "factors": ["Weather dependency", "Infrastructure quality", "Service frequency"],
+                "questions": ["Which mode has most predictable delivery?", "Backup options?"]
+            },
+            "risk_level": {
+                "factors": ["Geopolitical risks", "Route disruptions", "Capacity constraints"],
+                "questions": ["What could go wrong?", "How would you mitigate risks?"]
+            },
+            "environmental_impact": {
+                "factors": ["CO2 emissions per kg", "Sustainability goals", "Customer perception"],
+                "questions": ["Does environmental impact matter for brand?", "Future regulations?"]
+            }
+        },
+        "decision_matrix_template": {
+            "instruction": "Rate each factor 1-5 for importance, then score each mode 1-10",
+            "factors": ["Cost", "Speed", "Reliability", "Risk", "Environment"],
+            "example_weighting": {
+                "startup_focus": {"cost": 5, "speed": 4, "reliability": 3, "risk": 4, "environment": 2},
+                "premium_brand": {"cost": 3, "speed": 4, "reliability": 5, "risk": 4, "environment": 4}
             }
         }
     }

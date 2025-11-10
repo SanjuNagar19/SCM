@@ -129,6 +129,10 @@ def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[st
     """Calculate transportation costs for Dragon Fire Phase 2"""
     return dragon_fire.calculate_transport_costs(containers, total_kg, costs)
 
+def get_phase2_guidance() -> Dict[str, Any]:
+    """Get guidance for Phase 2 transportation mode analysis"""
+    return dragon_fire.get_phase2_guidance()
+
 def calculate_transport_costs_enhanced(
     containers: float, 
     total_kg: float, 
