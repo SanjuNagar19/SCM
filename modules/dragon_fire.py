@@ -9,7 +9,8 @@ from .base import (
 def get_assignment_questions() -> List[str]:
     """Return assignment questions for Dragon Fire Case"""
     return [
-        "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n2. Besides weight, also space matters, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
+        "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n"
+        "2. Aparrt from weight, volume is also essential, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
 
         "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. Show your work in Euros.\n\n2. **Mode Evaluation**: Given this is a startup with unproven market demand, choose your preferred transportation mode and justify with 3 specific reasons considering:\n   - Cost efficiency vs. market uncertainty\n   - Speed to market for product launch\n   - Financial risk management\n   - Flexibility for demand changes",
 
@@ -90,16 +91,96 @@ def get_powder_density_guidance() -> Dict[str, Any]:
         }
     }
 
-def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float, powder_density_kg_m3: float) -> Dict[str, Any]:
-    """Calculate volume metrics for Phase 1 with student estimates"""
-    # Standard 40ft container specifications
-    container_specs = {
-        "max_payload_kg": 26000,  # Typical 40ft container payload capacity
-        "max_volume_m3": 67.3,    # Internal volume of 40ft container
-        "length_m": 12.032,
-        "width_m": 2.352,
-        "height_m": 2.385
+def get_container_specifications() -> Dict[str, Any]:
+    """Return standard 40ft container specifications"""
+    return {
+        "container_type": "40ft High Cube Container",
+        "external_dimensions": {
+            "length_m": 12.192,
+            "width_m": 2.438,
+            "height_m": 2.896
+        },
+        "internal_dimensions": {
+            "length_m": 12.032,
+            "width_m": 2.352,
+            "height_m": 2.385
+        },
+        "capacity": {
+            "max_payload_kg": 26000,  # Maximum weight capacity
+            "max_volume_m3": 67.3,    # Internal volume
+            "tare_weight_kg": 4200    # Empty container weight
+        },
+        "notes": [
+            "Payload capacity may vary by shipping line",
+            "Actual usable volume depends on cargo packaging",
+            "Weight distribution must comply with axle load limits"
+        ]
     }
+
+def calculate_volume_metrics_with_estimates(
+    drinks_estimate: int, 
+    powder_per_drink_grams: float, 
+    powder_density_kg_m3: float,
+    container_weight_limit_kg: float = None,
+    container_volume_limit_m3: float = None
+) -> Dict[str, Any]:
+    """Calculate volume metrics allowing students to input their own container research"""
+    
+    # Get standard container specifications as default
+    standard_specs = get_container_specifications()["capacity"]
+    
+    # Use student research or defaults
+    weight_limit = container_weight_limit_kg if container_weight_limit_kg else standard_specs["max_payload_kg"]
+    volume_limit = container_volume_limit_m3 if container_volume_limit_m3 else standard_specs["max_volume_m3"]
+    
+    # Calculate total requirements
+    total_powder_kg = (drinks_estimate * powder_per_drink_grams) / 1000
+    total_volume_m3 = total_powder_kg / powder_density_kg_m3
+    
+    # Calculate containers needed based on both constraints
+    containers_by_weight = total_powder_kg / weight_limit
+    containers_by_volume = total_volume_m3 / volume_limit
+    containers_needed = max(containers_by_weight, containers_by_volume)
+    
+    # Determine limiting factor
+    limiting_factor = "weight" if containers_by_weight > containers_by_volume else "volume"
+    
+    return {
+        "input_parameters": {
+            "drinks_estimate": drinks_estimate,
+            "powder_per_drink_grams": powder_per_drink_grams,
+            "powder_density_kg_m3": powder_density_kg_m3,
+            "container_weight_limit_kg": weight_limit,
+            "container_volume_limit_m3": volume_limit,
+            "used_student_research": {
+                "weight_limit": container_weight_limit_kg is not None,
+                "volume_limit": container_volume_limit_m3 is not None
+            }
+        },
+        "calculations": {
+            "total_powder_kg": round(total_powder_kg, 2),
+            "total_volume_m3": round(total_volume_m3, 2),
+            "containers_by_weight": round(containers_by_weight, 2),
+            "containers_by_volume": round(containers_by_volume, 2),
+            "containers_needed": round(containers_needed, 2),
+            "limiting_factor": limiting_factor
+        },
+        "container_utilization": {
+            "weight_utilization_percent": round((total_powder_kg / containers_needed / weight_limit) * 100, 1),
+            "volume_utilization_percent": round((total_volume_m3 / containers_needed / volume_limit) * 100, 1)
+        },
+        "standard_container_reference": standard_specs
+    }
+
+def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float, powder_density_kg_m3: float, container_volume_m3: float = None) -> Dict[str, Any]:
+    """Calculate volume metrics for Phase 1 with student estimates - backward compatible"""
+    
+    # Get standard container specifications
+    container_specs = get_container_specifications()["capacity"]
+    
+    # Use provided container volume or default to standard 40ft container
+    if container_volume_m3 is None:
+        container_volume_m3 = container_specs["max_volume_m3"]
     
     # Calculate total requirements
     total_powder_kg = (drinks_estimate * powder_per_drink_grams) / 1000
@@ -107,7 +188,7 @@ def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float
     
     # Calculate containers needed based on both weight and volume constraints
     containers_by_weight = total_powder_kg / container_specs["max_payload_kg"]
-    containers_by_volume = total_volume_m3 / container_specs["max_volume_m3"]
+    containers_by_volume = total_volume_m3 / container_volume_m3
     containers_needed = max(containers_by_weight, containers_by_volume)  # Limiting factor
     
     return {
@@ -116,7 +197,11 @@ def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float
         "total_powder_kg": total_powder_kg,
         "total_volume_m3": total_volume_m3,
         "powder_density_used": powder_density_kg_m3,
-        "container_specs": container_specs,
+        "container_specs": {
+            "max_payload_kg": container_specs["max_payload_kg"],
+            "max_volume_m3": container_volume_m3,
+            "tare_weight_kg": container_specs["tare_weight_kg"]
+        },
         "containers_by_weight": containers_by_weight,
         "containers_by_volume": containers_by_volume,
         "containers_needed": containers_needed,
