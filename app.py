@@ -361,26 +361,19 @@ def student_info_page():
     st.header("Student Information")
     name = st.text_input("Enter your name:", value=st.session_state['student_name'], key="student_name_input")
     email = st.text_input("Enter your email:", value=st.session_state['student_email'], key="student_email_input")
-    roll_number = st.text_input("Enter your roll number:", value=st.session_state['student_roll_number'], key="student_roll_number_input")
     submit = st.button("Submit")
     if submit:
         st.session_state['student_name'] = name
         st.session_state['student_email'] = email
-        st.session_state['student_roll_number'] = roll_number
         email_clean = email.strip().lower()
-        roll_clean = roll_number.strip()
-        if name and email_clean.endswith("@whu.edu") and roll_clean:
+        if name and email_clean.endswith("@whu.edu"):
             st.session_state['info_complete'] = True
             # persist student
-            save_student(name, email_clean, roll_clean)
+            save_student(name, email_clean)
             st.rerun()
         else:
             st.session_state['info_complete'] = False
-            if not roll_clean:
-                st.warning("Please enter your name, roll number, and a valid WHU email (ending with @whu.edu) to start the assignment.")
-            else:
-                st.warning("Please enter your name, roll number, and a valid WHU email (ending with @whu.edu) to start the assignment.")
-
+            st.warning("Please enter your name, and a valid WHU email (ending with @whu.edu) to start the assignment.")
     st.markdown("---")
 
 # --- Assignment Page ---
@@ -666,9 +659,7 @@ def assignment_page():
         with col1:
             st.success(f"Logged in as: {st.session_state['student_name']}")
             st.caption(f"Email: {st.session_state['student_email']}")
-            if st.session_state.get('student_roll_number'):
-                st.caption(f"Roll Number: {st.session_state['student_roll_number']}")
-        
+            
         with col2:
             # Show current progress
             if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
@@ -849,7 +840,7 @@ def admin_page():
             
             for email, name, roll_number, _ in students:
                 answers = get_answers_by_email(email)
-                student_row = {"Name": name, "Email": email, "Roll Number": roll_number}
+                student_row = {"Name": name, "Email": email}
                 
                 # Get unique question indices
                 question_indices = set()
@@ -996,10 +987,9 @@ def admin_page():
     selected = st.selectbox("Quick lookup - Select student email:", options=[""] + emails, key="quick_lookup")
     
     if selected:
-        # Find student name and roll number
         student_info = next(((name, roll_number) for email, name, roll_number, _ in students if email == selected), ("Unknown", ""))
-        student_name, student_roll = student_info
-        st.subheader(f"Quick View: {student_name} - {student_roll} ({selected})")
+        student_name, student_email = student_info
+        st.subheader(f"Quick View: {student_name} - ({selected})")
         
         # Show summary
         answers = get_answers_by_email(selected)

@@ -9,13 +9,13 @@ from .base import (
 def get_assignment_questions() -> List[str]:
     """Return assignment questions for Dragon Fire Case"""
     return [
-        "Phase 1: Product & Market Analysis\n\nDesign the supply chain for Dragon Fire energy drink from Austria to China.\n\n**Case Background**: Blue Dragon (Austria) wants to launch Dragon Fire energy drink in China's high-end market (bars, clubs, restaurants). The product uses coca leaf powder (not caffeine) and sells for 25 Yuan (~3€) per drink.\n\n**Your Task**: Complete the product analysis:\n\n1. **Volume Estimation**: If Blue Dragon targets 1 million drinks in Year 1, and each drink needs 10g of powder, calculate:\n   - Total powder needed (kg)\n   - Estimated volume in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed (research container sizes)\n\n2. **Product Characteristics**: Identify 3 factors about the powder that will impact transportation choices (consider: shelf life, temperature sensitivity, regulatory restrictions, value density).",
+        "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n2. Besides weight, also space matters, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
 
-        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Austria to China.\n\n**Available Options**:\n- **Sea Freight**: 30-35 days, $2,000-3,000 per container\n- **Air Freight**: 3-5 days, $8-12 per kg\n- **Rail Freight**: 18-25 days, $4,000-5,000 per container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. Show your work.\n\n2. **Mode Evaluation**: Based on the following factors, choose your preferred transportation mode and justify with 3 specific reasons:\n   - Cost efficiency\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact",
+        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. Show your work in Euros.\n\n2. **Mode Evaluation**: Given this is a startup with unproven market demand, choose your preferred transportation mode and justify with 3 specific reasons considering:\n   - Cost efficiency vs. market uncertainty\n   - Speed to market for product launch\n   - Financial risk management\n   - Flexibility for demand changes",
 
-        "Phase 3: Supply Chain Design\n\nDesign your complete China operation.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle the drinks?\n   - Consider: labor costs, regulations, proximity to customers, water quality\n   - Identify 2-3 potential cities and rank them\n\n3. **Distribution Strategy**:\n   - How will finished drinks reach bars/clubs in major Chinese cities?\n   - Design your distribution network (regional hubs, direct delivery, etc.)\n   - Calculate approximate delivery radius and frequency\n\n4. **Inventory Planning**:\n   - How much safety stock of powder should you maintain?\n   - Where should inventory be held (port, factory, regional centers)?\n   - Consider seasonal demand variations and lead times\n\n**Deliverable**: Create a simple supply chain map showing: Austria production → transport → China port → mixing facility → distribution → end customers",
+        "Phase 3: Supply Chain Design\n\nDesign your complete China operation for this startup market entry.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target bar/restaurant markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle/can the drinks?\n   - Consider: labor costs, regulations, proximity to bars/restaurants, water quality, startup budget constraints\n   - Identify 2-3 potential cities and rank them\n\n3. **Distribution Strategy**:\n   - How will finished drinks reach bars/clubs/restaurants in major Chinese cities?\n   - Design your distribution network considering limited initial market (no supermarkets)\n   - Calculate approximate delivery radius and frequency for bar/restaurant channel\n\n4. **Inventory Planning for Startup**:\n   - How much safety stock should a startup maintain with unproven demand?\n   - Where should inventory be held (port, factory, regional centers)?\n   - Consider cash flow constraints and demand uncertainty\n\n**Deliverable**: Create a simple supply chain map showing: Germany production → transport → China port → mixing facility → distribution → bars/restaurants",
 
-        "Phase 4: Risk Management & Scenario Planning\n\nYour supply chain faces a real-world disruption. How will you respond?\n\n**Your Scenario**: You will be assigned one of three possible disruptions. Develop a comprehensive response plan for your assigned scenario.\n\n**Possible Disruptions**:\n1. **Suez Canal Blockage**: A major ship blocks the canal for 3 weeks (like Ever Given 2021)\n2. **COVID-19 Port Closure**: Shanghai port closes for 2 weeks due to outbreak\n3. **Regulatory Challenge**: China restricts coca leaf imports pending safety review\n\n**Your Response Plan** (for your assigned disruption):\n1. **Immediate Actions** (first 48 hours)\n2. **Short-term Mitigation** (1-4 weeks)\n3. **Long-term Adaptation** (1-6 months)\n4. **Cost Impact** (estimated additional costs)\n\n**Risk Prevention**: Design 2 proactive measures to reduce vulnerability to this type of disruption in the future."
+        "Phase 4: Risk Management & Scenario Planning\n\nYour startup supply chain faces a real-world disruption. How will you respond?\n\n**Your Scenario**: You will be assigned one of three possible disruptions. Develop a comprehensive response plan for your assigned scenario.\n\n**Possible Disruptions**:\n1. **Suez Canal Blockage**: A major ship blocks the canal for 3 weeks (like Ever Given 2021)\n2. **Disease Outbreak**: All ports except the Shanghai port close for 2 weeks due to a disease outbreak\n3. **Regulatory Challenge**: China prohibits the import of sugar, which is contained in the powder, pending food safety review\n\n**Your Response Plan** (for your assigned disruption):\n1. **Immediate Actions** (first 48 hours) - consider startup's limited resources\n2. **Short-term Mitigation** (1-4 weeks) - cash flow and customer retention focus\n3. **Long-term Adaptation** (1-6 months) - strategic pivots for startup survival\n4. **Cost Impact** (estimated additional costs and impact on startup budget)\n\n**Risk Prevention**: Design 2 proactive measures to reduce vulnerability considering startup constraints and limited market presence."
     ]
 
 def get_disruption_scenarios() -> Dict[int, Dict[str, Any]]:
@@ -26,29 +26,29 @@ def get_disruption_scenarios() -> Dict[int, Dict[str, Any]]:
             "description": "A major ship blocks the Suez Canal for 3 weeks (like Ever Given in 2021). This affects all sea freight shipments from Europe to Asia.",
             "impacts": [
                 "Sea freight delays of 3+ weeks",
-                "Alternative routes around Africa add 2 weeks and 20% cost",
+                "Alternative routes around Africa add 2 weeks and significant cost",
                 "Air freight capacity becomes scarce and expensive",
-                "Customer inventory runs low"
+                "Startup's limited inventory runs out, threatening market launch"
             ]
         },
         2: {
-            "title": "COVID-19 Port Closure",
-            "description": "Shanghai port closes for 2 weeks due to COVID outbreak. This is China's largest port handling 25% of container traffic.",
+            "title": "Disease Outbreak",
+            "description": "All ports except the Shanghai port close for 2 weeks due to a disease outbreak. This forces all shipments to be redirected to Shanghai.",
             "impacts": [
-                "All Shanghai shipments diverted to other ports",
-                "Secondary ports become congested",
-                "Inland transport costs increase from alternative ports",
-                "Customs clearance delays at backup ports"
+                "All shipments diverted to Shanghai port only",
+                "Shanghai port becomes heavily congested with increased traffic",
+                "Longer waiting times and increased port handling costs",
+                "Startup's limited cash flow strained by additional costs and delays"
             ]
         },
         3: {
-            "title": "Regulatory Challenge",
-            "description": "China suddenly restricts coca leaf imports pending safety review. This affects all coca-based products entering China.",
+            "title": "Regulatory Challenge", 
+            "description": "China prohibits the import of sugar, which is contained in the powder, pending food safety review. This affects all imported products containing sugar.",
             "impacts": [
-                "All Dragon Fire shipments blocked at border",
-                "Need alternative product formulation",
-                "Existing inventory may be confiscated",
-                "Market launch delayed indefinitely"
+                "All Dragon Fire shipments with sugar variant blocked at border",
+                "Need to reformulate products or obtain new certifications",
+                "Existing sugar-containing inventory held in customs or rejected",
+                "Market launch delayed, affecting startup's funding and timeline"
             ]
         }
     }
@@ -61,16 +61,66 @@ def assign_scenario(student_email: str) -> Dict[str, Any]:
     scenario_number = (hash_value % 3) + 1
     return scenarios[scenario_number]
 
-def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float) -> Dict[str, float]:
-    """Calculate volume metrics for Phase 1"""
-    total_powder_kg = (drinks_target * powder_per_drink) / 1000
-    total_volume_m3 = (total_powder_kg / powder_density) / 1000
-    containers_needed = total_volume_m3 / container_volume
+def get_powder_density_guidance() -> Dict[str, Any]:
+    """Provide guidance for powder density research"""
+    return {
+        "typical_ranges": {
+            "protein_powder": "400-600 kg/m³",
+            "sugar_powder": "600-800 kg/m³", 
+            "vitamin_mineral_mix": "300-500 kg/m³",
+            "energy_drink_powder_mix": "450-650 kg/m³"
+        },
+        "factors_affecting_density": [
+            "Particle size and distribution",
+            "Moisture content", 
+            "Compaction during transport",
+            "Ingredient composition (sugar vs sugar-free)",
+            "Processing method (spray-dried, freeze-dried, etc.)"
+        ],
+        "research_tips": [
+            "Consider the specific ingredients in energy drink powder",
+            "Account for both sugar and sugar-free variants",
+            "Look for industry standards for beverage powder densities",
+            "Consider packaging method (loose vs compressed)"
+        ],
+        "recommended_range": {
+            "min_kg_m3": 450,
+            "max_kg_m3": 650,
+            "typical_kg_m3": 550
+        }
+    }
+
+def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float, powder_density_kg_m3: float) -> Dict[str, Any]:
+    """Calculate volume metrics for Phase 1 with student estimates"""
+    # Standard 40ft container specifications
+    container_specs = {
+        "max_payload_kg": 26000,  # Typical 40ft container payload capacity
+        "max_volume_m3": 67.3,    # Internal volume of 40ft container
+        "length_m": 12.032,
+        "width_m": 2.352,
+        "height_m": 2.385
+    }
+    
+    # Calculate total requirements
+    total_powder_kg = (drinks_estimate * powder_per_drink_grams) / 1000
+    total_volume_m3 = total_powder_kg / powder_density_kg_m3
+    
+    # Calculate containers needed based on both weight and volume constraints
+    containers_by_weight = total_powder_kg / container_specs["max_payload_kg"]
+    containers_by_volume = total_volume_m3 / container_specs["max_volume_m3"]
+    containers_needed = max(containers_by_weight, containers_by_volume)  # Limiting factor
     
     return {
+        "drinks_estimate": drinks_estimate,
+        "powder_per_drink_grams": powder_per_drink_grams,
         "total_powder_kg": total_powder_kg,
         "total_volume_m3": total_volume_m3,
-        "containers_needed": containers_needed
+        "powder_density_used": powder_density_kg_m3,
+        "container_specs": container_specs,
+        "containers_by_weight": containers_by_weight,
+        "containers_by_volume": containers_by_volume,
+        "containers_needed": containers_needed,
+        "limiting_factor": "weight" if containers_by_weight > containers_by_volume else "volume"
     }
 
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
@@ -108,13 +158,18 @@ def answer_query(query: str, assignment_context: str = "", user_email: str = "")
             "Encourage the student to think and guide them to the right concepts or formulas. "
             "Provide data from your understanding if a student asks for it. "
             "If the student asks for a solution, only provide hints and steps, not the final answer.\n"
-            "Dragon Fire Case Context: Blue Dragon (Austria) is launching an energy drink in China's high-end market. "
-            "Key facts: 25 Yuan price point, coca leaf-based (not caffeine), powder shipped from Austria, "
-            "mixed with water in China, distributed to bars/clubs/restaurants. "
-            "Transportation options: Sea (30-35 days, $2-3k/container), Air (3-5 days, $8-12/kg), "
-            "Rail (18-25 days, $4-5k/container). Main Chinese ports: Shanghai, Ningbo, Shenzhen. "
-            "Consider: regulatory risks of coca leaf products, temperature sensitivity, premium market requirements, "
-            "supply chain disruptions (Suez Canal, port closures, etc.). Guide students through systematic analysis "
+            "Dragon Fire Case Context: Blue Dragon (German startup) is launching Dragon Fire energy drink in China as their first market. "
+            "Key facts: 25 Yuan price point for bars/restaurants (~3.30€), future supermarket price 10 Yuan (~1.30€), "
+            "powder produced in Germany and shipped to China, mixed with water and bottled/canned in China, "
+            "two variants (with sugar and sugar-free), distributed to bars/clubs/restaurants initially (no supermarkets yet). "
+            "Transportation costs: Air cargo €1.50/kg (3 days), Sea freight €400 per 40ft container (30 days), "
+            "Rail transport €3,000 per 40ft container (15 days). Main Chinese ports: Shanghai, Ningbo, Shenzhen. "
+            "For Phase 1: Students must estimate their own sales targets and powder requirements per drink. "
+            "Guide them to consider market research methods, comparable products, and realistic startup projections. "
+            "For powder density, typical energy drink powders range 450-650 kg/m³. Standard 40ft containers: "
+            "26,000 kg payload capacity, 67.3 m³ volume. Students should research and justify their estimates. "
+            "Consider: market entry risks, regulatory requirements, temperature sensitivity, "
+            "premium market positioning, supply chain disruptions. Guide students through systematic analysis "
             "of volume calculations, mode selection, risk management, and total cost optimization."
         )
         
