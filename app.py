@@ -16,6 +16,13 @@ from backend import (
     set_config,
     clear_rate_limits,
     get_rate_limit_status,
+    # Module-specific functions
+    validate_numeric_answer,
+    assign_scenario,
+    calculate_volume_metrics,
+    calculate_transport_costs,
+    # Section management
+    set_current_section,
 )
 import pandas as pd
 import os
@@ -418,14 +425,7 @@ def assignment_page():
             del st.session_state["chat_input_unique"]
     
     # tell backend which section we're working with (used for DB queries)
-    import backend as _backend
-    _backend.save_answer.current_section = selected_section
-    _backend.save_chat.current_section = selected_section
-    _backend.save_grade.current_section = selected_section
-    _backend.get_answers_by_email.current_section = selected_section
-    _backend.get_chats_by_email.current_section = selected_section
-    _backend.get_grades_by_email.current_section = selected_section
-    _backend.get_latest_grade.current_section = selected_section
+    set_current_section(selected_section)
     
     if 'question_idx' not in st.session_state:
         st.session_state['question_idx'] = 0
@@ -462,16 +462,12 @@ def assignment_page():
                 # Task 2.1 – DC Utilization
                 val_2_1 = st.number_input("Task 2.1 - Average stores per DC", value=0.0, format="%.2f", key="auto_2_1")
                 if st.button("Check Task 2.1"):
-                    expected_2_1 = 16000 / 158
-                    tol_2_1 = 2
-                    diff = abs(val_2_1 - expected_2_1)
-                    passed = diff <= tol_2_1
+                    passed, message = validate_numeric_answer("2.1", val_2_1)
                     if passed:
-                        st.success(f"Task 2.1 OK — your {val_2_1:.2f} is within ±{tol_2_1} of the expected range.")
+                        st.success(message)
                         st.session_state['auto_2_1_pass'] = True
                     else:
-                        # Provide a hint without revealing the expected value
-                        st.info("Hint: compute average stores per DC by dividing total stores by number of DCs (i.e. total stores ÷ DCs). Check your division and rounding.")
+                        st.info(message)
                     # save numeric answer as text for this question
                     save_answer(st.session_state.get('student_email', ''), current_idx, f"2.1:{val_2_1:.2f} -> {'PASS' if passed else 'FAIL'}")
 
@@ -480,20 +476,17 @@ def assignment_page():
                 val_japan = st.number_input("Japan cost (¥)", value=0.0, format="%.2f", key="auto_2_2_japan")
                 val_us = st.number_input("US cost (¥)", value=0.0, format="%.2f", key="auto_2_2_us")
                 if st.button("Check Task 2.2"):
-                    expected_japan = (50000 / 10) * 3
-                    expected_us = (60000 / 8) * 1
-                    expected_diff = expected_japan - expected_us
-                    tol_yen = 500
-                    diff_j = abs(val_japan - expected_japan)
-                    diff_u = abs(val_us - expected_us)
-                    diff_diff = abs((val_japan - val_us) - expected_diff)
-                    if passed:
+                    # Validate both values
+                    passed_japan, msg_japan = validate_numeric_answer("2.2_japan", val_japan)
+                    passed_us, msg_us = validate_numeric_answer("2.2_us", val_us)
+                    passed_diff, msg_diff = validate_numeric_answer("2.2_difference", val_japan - val_us)
+                    
+                    if passed_japan and passed_us and passed_diff:
                         st.success("Task 2.2 OK — your values are within the acceptable tolerance.")
                         st.session_state['auto_2_2_pass'] = True
                     else:
-                        # Provide step hints without revealing exact expected numbers
                         st.info("Hint: For each country compute (cost per truck ÷ stores per truck) × deliveries per store/day to get the per-store/day cost, then compare the two results. Check your arithmetic and units.")
-                    save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if passed else 'FAIL'}")
+                    save_answer(st.session_state.get('student_email', ''), current_idx, f"2.2: Japan {val_japan:.2f}, US {val_us:.2f} -> {'PASS' if (passed_japan and passed_us and passed_diff) else 'FAIL'}")
     
     # --- Dragon Fire Case Interactive Tools ---
     elif st.session_state.get('selected_section') == 'Dragon Fire Case':
@@ -515,22 +508,20 @@ def assignment_page():
                 
                 # Only show calculations if all values are provided
                 if drinks_target and powder_per_drink and powder_density and container_volume:
-                    # Calculations
-                    total_powder_kg = (drinks_target * powder_per_drink) / 1000
-                    total_volume_m3 = (total_powder_kg / powder_density) / 1000
-                    containers_needed = total_volume_m3 / container_volume
+                    # Use modular calculation function
+                    metrics = calculate_volume_metrics(drinks_target, powder_per_drink, powder_density, container_volume)
                     
                     st.markdown("**Results:**")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Total Powder", f"{total_powder_kg:,.0f} kg")
+                        st.metric("Total Powder", f"{metrics['total_powder_kg']:,.0f} kg")
                     with col2:
-                        st.metric("Volume Needed", f"{total_volume_m3:.1f} m³")
+                        st.metric("Volume Needed", f"{metrics['total_volume_m3']:.1f} m³")
                     with col3:
-                        st.metric("Containers", f"{containers_needed:.1f}")
+                        st.metric("Containers", f"{metrics['containers_needed']:.1f}")
                     
                     # Save calculation results for grading
-                    calc_result = f"Volume Calculator: {drinks_target:,} drinks → {total_powder_kg:,.0f} kg → {total_volume_m3:.1f} m³ → {containers_needed:.1f} containers"
+                    calc_result = f"Volume Calculator: {drinks_target:,} drinks → {metrics['total_powder_kg']:,.0f} kg → {metrics['total_volume_m3']:.1f} m³ → {metrics['containers_needed']:.1f} containers"
                     if st.button("Save Volume Calculation"):
                         save_answer(st.session_state.get('student_email', ''), 99, calc_result)  # Special index for calculations
                         st.success("Calculation saved!")
@@ -564,25 +555,28 @@ def assignment_page():
                 
                 # Only show calculations if all values are provided
                 if all([containers, total_kg, sea_cost_per_container, sea_days, air_cost_per_kg, air_days, rail_cost_per_container, rail_days]):
-                    # Calculations
-                    sea_total = containers * sea_cost_per_container
-                    air_total = total_kg * air_cost_per_kg
-                    rail_total = containers * rail_cost_per_container
+                    # Use modular calculation function
+                    costs = {
+                        'sea_per_container': sea_cost_per_container,
+                        'air_per_kg': air_cost_per_kg,
+                        'rail_per_container': rail_cost_per_container
+                    }
+                    cost_results = calculate_transport_costs(containers, total_kg, costs)
                     
                     st.markdown("**Cost Calculations:**")
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Sea Total Cost", f"${sea_total:,.0f}")
-                        st.metric("Sea Cost per kg", f"${sea_total/total_kg:.2f}")
+                        st.metric("Sea Total Cost", f"${cost_results['sea_total']:,.0f}")
+                        st.metric("Sea Cost per kg", f"${cost_results['sea_total']/total_kg:.2f}")
                     with col2:
-                        st.metric("Air Total Cost", f"${air_total:,.0f}")
-                        st.metric("Air Cost per kg", f"${air_total/total_kg:.2f}")
+                        st.metric("Air Total Cost", f"${cost_results['air_total']:,.0f}")
+                        st.metric("Air Cost per kg", f"${cost_results['air_total']/total_kg:.2f}")
                     with col3:
-                        st.metric("Rail Total Cost", f"${rail_total:,.0f}")
-                        st.metric("Rail Cost per kg", f"${rail_total/total_kg:.2f}")
+                        st.metric("Rail Total Cost", f"${cost_results['rail_total']:,.0f}")
+                        st.metric("Rail Cost per kg", f"${cost_results['rail_total']/total_kg:.2f}")
                     
                     # Save comparison results
-                    comparison_result = f"Transport Comparison - Sea: ${sea_total:,.0f} ({sea_days}d), Air: ${air_total:,.0f} ({air_days}d), Rail: ${rail_total:,.0f} ({rail_days}d)"
+                    comparison_result = f"Transport Comparison - Sea: ${cost_results['sea_total']:,.0f} ({sea_days}d), Air: ${cost_results['air_total']:,.0f} ({air_days}d), Rail: ${cost_results['rail_total']:,.0f} ({rail_days}d)"
                     
                     if st.button("Save Transportation Analysis"):
                         save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
@@ -591,47 +585,9 @@ def assignment_page():
                     st.info("Please fill in all transportation research values to see calculations")
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
-            # Assign a random disruption scenario to each student based on their email
-            import hashlib
+            # Assign a scenario using the modular function
             student_email = st.session_state.get('student_email', 'anonymous')
-            # Use hash of email to ensure same student always gets same scenario
-            hash_value = int(hashlib.md5(student_email.encode()).hexdigest(), 16)
-            scenario_number = (hash_value % 3) + 1
-            
-            scenarios = {
-                1: {
-                    "title": "Suez Canal Blockage",
-                    "description": "A major ship blocks the Suez Canal for 3 weeks (like Ever Given in 2021). This affects all sea freight shipments from Europe to Asia.",
-                    "impacts": [
-                        "Sea freight delays of 3+ weeks",
-                        "Alternative routes around Africa add 2 weeks and 20% cost",
-                        "Air freight capacity becomes scarce and expensive",
-                        "Customer inventory runs low"
-                    ]
-                },
-                2: {
-                    "title": "COVID-19 Port Closure",
-                    "description": "Shanghai port closes for 2 weeks due to COVID outbreak. This is China's largest port handling 25% of container traffic.",
-                    "impacts": [
-                        "All Shanghai shipments diverted to other ports",
-                        "Secondary ports become congested",
-                        "Inland transport costs increase from alternative ports",
-                        "Customs clearance delays at backup ports"
-                    ]
-                },
-                3: {
-                    "title": "Regulatory Challenge",
-                    "description": "China suddenly restricts coca leaf imports pending safety review. This affects all coca-based products entering China.",
-                    "impacts": [
-                        "All Dragon Fire shipments blocked at border",
-                        "Need alternative product formulation",
-                        "Existing inventory may be confiscated",
-                        "Market launch delayed indefinitely"
-                    ]
-                }
-            }
-            
-            assigned_scenario = scenarios[scenario_number]
+            assigned_scenario = assign_scenario(student_email)
             
             st.info(f"**Your Assigned Disruption**: {assigned_scenario['title']}")
             
@@ -1018,8 +974,8 @@ def admin_page():
                 grade_time = ""
             # chat history aggregated
             # fetch chat history for the selected section
-            _import_backend = __import__('backend')
-            _import_backend.get_chats_by_email.current_section = section if section != "All" else 'Ch.3'
+            # Use the new modular function approach
+            chats = get_chats_by_email(email, section if section != "All" else 'Ch.3')
             chats = get_chats_by_email(email_clean)
             chat_list = []
             for q_text, bot_resp, created_at in chats:
