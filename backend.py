@@ -96,9 +96,17 @@ def assign_scenario(student_email: str) -> Dict[str, Any]:
     """Assign a scenario to a student for Dragon Fire case"""
     return dragon_fire.assign_scenario(student_email)
 
-def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float) -> Dict[str, float]:
+def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float, container_weight_capacity: float = None) -> Dict[str, float]:
     """Calculate volume metrics for Dragon Fire Phase 1"""
-    return dragon_fire.calculate_volume_metrics(drinks_target, powder_per_drink, powder_density, container_volume)
+    return dragon_fire.calculate_volume_metrics(drinks_target, powder_per_drink, powder_density, container_volume, container_weight_capacity)
+
+def get_container_research_info() -> str:
+    """Get container research information for students"""
+    return dragon_fire.get_container_research_info()
+
+def get_container_specifications_display() -> Dict[str, Any]:
+    """Get detailed container specifications for research"""
+    return dragon_fire.get_container_specifications_display()
 
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
     """Calculate transportation costs for Dragon Fire Phase 2"""
