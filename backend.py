@@ -30,9 +30,46 @@ SECTION_MODULES = {
     "Dragon Fire Case": dragon_fire
 }
 
+# Section visibility configuration - set to False to hide from students
+SECTION_VISIBILITY = {
+    "Ch.3": False,                    # Visible to students
+    "7-Eleven Case 2015": False,      # Visible to students  
+    "Dragon Fire Case": True,       # Hidden from students
+}
+
+# Optional: Section status with reasons (for admin dashboard)
+SECTION_STATUS = {
+    "Ch.3": {"visible": True, "reason": "Active assignment"},
+    "7-Eleven Case 2015": {"visible": True, "reason": "Active case study"},
+    "Dragon Fire Case": {"visible": False, "reason": "In development - not ready for students"},
+}
+
 def get_available_sections() -> List[str]:
-    """Get list of available sections"""
+    """Get list of available sections (only visible ones)"""
+    return [section for section, visible in SECTION_VISIBILITY.items() 
+            if visible and section in SECTION_MODULES]
+
+def get_all_sections() -> List[str]:
+    """Get all sections (including hidden ones) - for admin use"""
     return list(SECTION_MODULES.keys())
+
+def get_section_status(section: str) -> Dict[str, Any]:
+    """Get detailed status of a section - for admin use"""
+    if section in SECTION_STATUS:
+        return SECTION_STATUS[section]
+    elif section in SECTION_MODULES:
+        return {"visible": SECTION_VISIBILITY.get(section, True), "reason": "No specific reason"}
+    else:
+        return {"visible": False, "reason": "Section not found"}
+
+def set_section_visibility(section: str, visible: bool, reason: str = ""):
+    """Admin function to change section visibility"""
+    if section in SECTION_MODULES:
+        SECTION_VISIBILITY[section] = visible
+        SECTION_STATUS[section] = {"visible": visible, "reason": reason}
+        logger.info(f"Section '{section}' visibility set to {visible}. Reason: {reason}")
+        return True
+    return False
 
 def get_assignment_questions(section: str = "Ch.3") -> List[str]:
     """Return assignment questions for a given section"""
