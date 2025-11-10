@@ -133,12 +133,12 @@ def calculate_transport_costs_enhanced(
     containers: float, 
     total_kg: float, 
     total_volume_m3: float,
-    costs: Dict[str, float],
-    cost_of_capital_annual: float = 0.10
+    powder_value_per_kg: float,
+    wacc_annual: float = 0.12
 ) -> Dict[str, Any]:
-    """Enhanced transportation cost calculation with cost of capital and analysis factors"""
+    """Enhanced transportation cost calculation with volume considerations and WACC"""
     return dragon_fire.calculate_transport_costs_enhanced(
-        containers, total_kg, total_volume_m3, costs, cost_of_capital_annual
+        containers, total_kg, total_volume_m3, powder_value_per_kg, wacc_annual
     )
 
 # Section-specific functions for 7-Eleven case

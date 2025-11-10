@@ -388,39 +388,50 @@ def calculate_transport_costs_enhanced(
     containers: float, 
     total_kg: float, 
     total_volume_m3: float,
-    costs: Dict[str, float],
-    cost_of_capital_annual: float = 0.10  # Default 10% annual cost of capital
+    powder_value_per_kg: float,
+    wacc_annual: float = 0.12  # Weighted Average Cost of Capital for startup
 ) -> Dict[str, Any]:
-    """Enhanced transportation cost calculation including cost of capital and comprehensive analysis"""
+    """Enhanced transportation cost calculation with volume considerations and WACC"""
     
-    # Transportation costs
-    sea_transport_cost = containers * costs.get('sea_per_container', 400)
-    air_transport_cost = total_kg * costs.get('air_per_kg', 1.50)
-    rail_transport_cost = containers * costs.get('rail_per_container', 3000)
-    
-    # Transit times (days)
-    transit_times = {
-        'sea': 30,
-        'air': 3,
-        'rail': 15
+    # Fixed transportation costs and transit times (from assignment)
+    transport_rates = {
+        'sea': {'cost_per_container': 400, 'transit_days': 30},
+        'air': {'cost_per_kg': 1.50, 'transit_days': 3},
+        'rail': {'cost_per_container': 3000, 'transit_days': 15}
     }
     
-    # Calculate cost of capital for inventory in transit
-    # Assume powder value of €10 per kg for cost of capital calculation
-    powder_value_per_kg = 10  # Students should adjust this
-    total_inventory_value = total_kg * powder_value_per_kg
-    daily_capital_cost = (cost_of_capital_annual / 365) * total_inventory_value
+    # Calculate base transportation costs
+    sea_transport_cost = containers * transport_rates['sea']['cost_per_container']
+    air_transport_cost = total_kg * transport_rates['air']['cost_per_kg']
+    rail_transport_cost = containers * transport_rates['rail']['cost_per_container']
     
-    sea_capital_cost = daily_capital_cost * transit_times['sea']
-    air_capital_cost = daily_capital_cost * transit_times['air']
-    rail_capital_cost = daily_capital_cost * transit_times['rail']
+    # Calculate inventory value tied up during transit
+    total_inventory_value = total_kg * powder_value_per_kg
+    daily_wacc_cost = (wacc_annual / 365) * total_inventory_value
+    
+    # Cost of capital for each mode based on transit time
+    sea_capital_cost = daily_wacc_cost * transport_rates['sea']['transit_days']
+    air_capital_cost = daily_wacc_cost * transport_rates['air']['transit_days']
+    rail_capital_cost = daily_wacc_cost * transport_rates['rail']['transit_days']
     
     # Total costs (transport + cost of capital)
     sea_total_cost = sea_transport_cost + sea_capital_cost
     air_total_cost = air_transport_cost + air_capital_cost
     rail_total_cost = rail_transport_cost + rail_capital_cost
     
+    # Volume efficiency analysis
+    container_volume_capacity = 67.3  # m³ per 40ft container
+    volume_utilization = (total_volume_m3 / containers) / container_volume_capacity * 100
+    
     return {
+        "input_parameters": {
+            "containers": round(containers, 2),
+            "total_weight_kg": round(total_kg, 2),
+            "total_volume_m3": round(total_volume_m3, 3),
+            "powder_value_per_kg": powder_value_per_kg,
+            "wacc_annual": wacc_annual,
+            "inventory_value": round(total_inventory_value, 2)
+        },
         "transportation_costs": {
             "sea_transport": round(sea_transport_cost, 2),
             "air_transport": round(air_transport_cost, 2),
@@ -430,50 +441,75 @@ def calculate_transport_costs_enhanced(
             "sea_capital": round(sea_capital_cost, 2),
             "air_capital": round(air_capital_cost, 2),
             "rail_capital": round(rail_capital_cost, 2),
-            "annual_rate_used": cost_of_capital_annual,
-            "inventory_value_assumed": total_inventory_value
+            "daily_wacc_cost": round(daily_wacc_cost, 2)
         },
         "total_costs": {
             "sea_total": round(sea_total_cost, 2),
             "air_total": round(air_total_cost, 2),
             "rail_total": round(rail_total_cost, 2)
         },
-        "cost_per_kg": {
+        "cost_efficiency": {
             "sea_per_kg": round(sea_total_cost / total_kg, 2),
             "air_per_kg": round(air_total_cost / total_kg, 2),
-            "rail_per_kg": round(rail_total_cost / total_kg, 2)
+            "rail_per_kg": round(rail_total_cost / total_kg, 2),
+            "sea_per_m3": round(sea_total_cost / total_volume_m3, 2),
+            "air_per_m3": round(air_total_cost / total_volume_m3, 2),
+            "rail_per_m3": round(rail_total_cost / total_volume_m3, 2)
         },
-        "efficiency_metrics": {
-            "containers_used": round(containers, 2),
-            "weight_kg": round(total_kg, 2),
-            "volume_m3": round(total_volume_m3, 3),
-            "weight_per_container": round(total_kg / containers, 2) if containers > 0 else 0,
-            "volume_per_container": round(total_volume_m3 / containers, 2) if containers > 0 else 0
+        "volume_analysis": {
+            "volume_utilization_percent": round(volume_utilization, 1),
+            "containers_needed": round(containers, 2),
+            "volume_per_container": round(total_volume_m3 / containers, 2),
+            "container_capacity_m3": container_volume_capacity,
+            "unused_volume_per_container": round(container_volume_capacity - (total_volume_m3 / containers), 2)
         },
         "transit_analysis": {
-            "sea_days": transit_times['sea'],
-            "air_days": transit_times['air'],
-            "rail_days": transit_times['rail'],
-            "time_savings_air_vs_sea": transit_times['sea'] - transit_times['air'],
-            "time_savings_rail_vs_sea": transit_times['sea'] - transit_times['rail']
+            "sea_days": transport_rates['sea']['transit_days'],
+            "air_days": transport_rates['air']['transit_days'],
+            "rail_days": transport_rates['rail']['transit_days'],
+            "time_value_difference": {
+                "air_vs_sea_savings": round(sea_capital_cost - air_capital_cost, 2),
+                "rail_vs_sea_savings": round(sea_capital_cost - rail_capital_cost, 2)
+            }
         },
         "evaluation_factors": {
             "cost_ranking": get_cost_ranking(sea_total_cost, air_total_cost, rail_total_cost),
-            "speed_ranking": {"fastest": "Air (3 days)", "medium": "Rail (15 days)", "slowest": "Sea (30 days)"},
-            "reliability_notes": {
-                "sea": "Weather dependent, port congestion risk",
-                "air": "High reliability, limited cargo space",
-                "rail": "Moderate reliability, infrastructure dependent"
+            "speed_ranking": {
+                "fastest": f"Air ({transport_rates['air']['transit_days']} days)",
+                "medium": f"Rail ({transport_rates['rail']['transit_days']} days)",
+                "slowest": f"Sea ({transport_rates['sea']['transit_days']} days)"
+            },
+            "reliability_assessment": {
+                "sea": {"score": "Medium", "notes": "Weather dependent, port congestion risk"},
+                "air": {"score": "High", "notes": "Most reliable but capacity limited"},
+                "rail": {"score": "Medium-High", "notes": "Good reliability, infrastructure dependent"}
             },
             "risk_factors": {
-                "sea": ["Suez Canal blockage", "Port strikes", "Weather delays"],
-                "air": ["Limited capacity", "High cost volatility", "Airport restrictions"],
-                "rail": ["Infrastructure issues", "Border delays", "Capacity constraints"]
+                "sea": ["Suez Canal disruption", "Port strikes", "Weather delays", "Piracy (rare)"],
+                "air": ["Limited cargo space", "Airport restrictions", "High cost volatility"],
+                "rail": ["Border delays", "Infrastructure issues", "Political tensions"]
             },
             "environmental_impact": {
-                "sea": "Lowest CO2 per kg",
-                "rail": "Medium CO2 per kg", 
-                "air": "Highest CO2 per kg"
+                "sea": {"score": "Best", "co2_rating": "Lowest emissions per kg"},
+                "rail": {"score": "Good", "co2_rating": "Medium emissions per kg"},
+                "air": {"score": "Poor", "co2_rating": "Highest emissions per kg"}
+            }
+        },
+        "startup_considerations": {
+            "cash_flow_impact": {
+                "sea": "Lowest upfront cost, longest cash cycle",
+                "rail": "Medium cost, medium cash cycle", 
+                "air": "Highest cost, shortest cash cycle"
+            },
+            "scalability": {
+                "sea": "Excellent for large volumes",
+                "rail": "Good for regular shipments",
+                "air": "Limited by capacity and cost"
+            },
+            "flexibility": {
+                "sea": "Low flexibility, long commitment",
+                "rail": "Medium flexibility",
+                "air": "High flexibility, quick adjustments possible"
             }
         }
     }
