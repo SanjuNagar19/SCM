@@ -96,9 +96,10 @@ def assign_scenario(student_email: str) -> Dict[str, Any]:
     """Assign a scenario to a student for Dragon Fire case"""
     return dragon_fire.assign_scenario(student_email)
 
-def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float, container_weight_capacity: float = None) -> Dict[str, float]:
+def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float) -> Dict[str, float]:
     """Calculate volume metrics for Dragon Fire Phase 1"""
-    return dragon_fire.calculate_volume_metrics(drinks_target, powder_per_drink, powder_density, container_volume, container_weight_capacity)
+    # Call with 4 parameters only to match current app.py call
+    return dragon_fire.calculate_volume_metrics(drinks_target, powder_per_drink, powder_density, container_volume)
 
 def get_container_research_info() -> str:
     """Get container research information for students"""
