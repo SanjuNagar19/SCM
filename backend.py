@@ -125,25 +125,56 @@ def validate_container_research(weight_capacity_kg: float, volume_capacity_m3: f
     """Validate student's container research and provide feedback"""
     return dragon_fire.validate_student_container_research(weight_capacity_kg, volume_capacity_m3)
 
-def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
-    """Calculate transportation costs for Dragon Fire Phase 2"""
-    return dragon_fire.calculate_transport_costs(containers, total_kg, costs)
-
 def get_phase2_guidance() -> Dict[str, Any]:
     """Get guidance for Phase 2 transportation mode analysis"""
     return dragon_fire.get_phase2_guidance()
 
-def calculate_transport_costs_enhanced(
-    containers: float, 
-    total_kg: float, 
-    total_volume_m3: float,
-    powder_value_per_kg: float,
-    wacc_annual: float = 0.12
+def collect_phase2_inputs(
+    containers: float,
+    total_weight_kg: float,
+    total_volume_m3: float, 
+    wacc_rate: float,
+    powder_value_per_kg: float = None
 ) -> Dict[str, Any]:
-    """Enhanced transportation cost calculation with volume considerations and WACC"""
-    return dragon_fire.calculate_transport_costs_enhanced(
-        containers, total_kg, total_volume_m3, powder_value_per_kg, wacc_annual
+    """Collect and validate Phase 2 inputs for student analysis"""
+    return dragon_fire.collect_phase2_inputs(
+        containers, total_weight_kg, total_volume_m3, wacc_rate, powder_value_per_kg
     )
+
+def save_phase2_inputs(
+    student_email: str,
+    containers: float,
+    total_weight_kg: float,
+    total_volume_m3: float,
+    wacc_rate: float,
+    powder_value_per_kg: float = None
+) -> Dict[str, Any]:
+    """Save student's Phase 2 inputs for analysis"""
+    return {
+        "student_email": student_email,
+        "phase2_inputs": {
+            "containers": containers,
+            "total_weight_kg": total_weight_kg,
+            "total_volume_m3": total_volume_m3,
+            "wacc_rate": wacc_rate,
+            "powder_value_per_kg": powder_value_per_kg
+        },
+        "guidance": {
+            "next_steps": [
+                "Calculate transportation costs using provided rates",
+                "Calculate cost of capital for each mode",
+                "Compare total costs and other factors",
+                "Make mode selection with 3 justifications"
+            ],
+            "calculation_formulas": {
+                "sea_cost": "containers × €400",
+                "air_cost": "total_weight_kg × €1.50", 
+                "rail_cost": "containers × €3,000",
+                "daily_wacc_cost": "(wacc_rate ÷ 365) × (total_weight_kg × powder_value_per_kg)",
+                "transit_costs": "daily_wacc_cost × transit_days (30/3/15 days)"
+            }
+        }
+    }
 
 # Section-specific functions for 7-Eleven case
 def validate_numeric_answer(task: str, value: float) -> tuple[bool, str]:

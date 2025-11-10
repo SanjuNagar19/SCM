@@ -459,6 +459,48 @@ def get_phase2_guidance() -> Dict[str, Any]:
         }
     }
 
+def collect_phase2_inputs(
+    containers: float,
+    total_weight_kg: float, 
+    total_volume_m3: float,
+    wacc_rate: float,
+    powder_value_per_kg: float = None
+) -> Dict[str, Any]:
+    """Collect and validate Phase 2 inputs for student analysis"""
+    
+    # Basic validation
+    errors = []
+    if containers <= 0:
+        errors.append("Number of containers must be positive")
+    if total_weight_kg <= 0:
+        errors.append("Total weight must be positive")
+    if total_volume_m3 <= 0:
+        errors.append("Total volume must be positive")
+    if not (0.05 <= wacc_rate <= 0.30):  # 5% to 30%
+        errors.append("WACC rate should be between 5% and 30% (0.05 to 0.30)")
+    if powder_value_per_kg and powder_value_per_kg <= 0:
+        errors.append("Powder value per kg must be positive")
+    
+    return {
+        "inputs": {
+            "containers": containers,
+            "total_weight_kg": total_weight_kg,
+            "total_volume_m3": total_volume_m3, 
+            "wacc_rate": wacc_rate,
+            "powder_value_per_kg": powder_value_per_kg
+        },
+        "validation": {
+            "valid": len(errors) == 0,
+            "errors": errors
+        },
+        "next_steps": [
+            "Use the transportation rates provided in the assignment",
+            "Calculate cost of capital based on your WACC assumption", 
+            "Consider all 5 evaluation factors in your analysis",
+            "Write your analysis and mode selection with justifications"
+        ]
+    }
+
 def calculate_transport_costs_enhanced(
     containers: float, 
     total_kg: float, 
