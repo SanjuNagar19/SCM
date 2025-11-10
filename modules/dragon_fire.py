@@ -172,7 +172,72 @@ def calculate_volume_metrics_with_estimates(
         "standard_container_reference": standard_specs
     }
 
-def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float) -> Dict[str, Any]:
+def get_container_research_info() -> str:
+    """Return formatted container information for student research display"""
+    specs = get_container_specifications_display()
+    
+    info = """
+##  Container Research Guide
+
+### Standard 40ft High Cube Container Specifications:
+
+**Weight Limits:**
+- **Maximum Payload:** 26,000 kg (what you can actually ship)
+- **Container Weight:** 4,200 kg (empty container)
+- **Gross Weight:** 30,400 kg (total maximum)
+
+**Volume Limits:**
+- **Internal Volume:** 67.3 m³
+- **Dimensions:** 12.0m × 2.4m × 2.4m (L × W × H)
+
+### Research Tips:
+- Different shipping lines may have slightly different weight limits (24,000-27,000 kg)
+- Standard containers (58.3 m³) vs High Cube containers (67.3 m³)
+- Consider packaging weight in your calculations
+- Energy drink powder density typically: 450-650 kg/m³
+
+### Your Task:
+Research and input the weight and volume limits you find for 40ft containers, then calculate how many containers your powder shipment will need.
+"""
+    return info
+
+def get_container_specifications_display() -> Dict[str, Any]:
+    """Return container specifications formatted for student display and research"""
+    return {
+        "standard_40ft_container": {
+            "type": "40ft High Cube Container (Most Common)",
+            "weight_limits": {
+                "max_payload_kg": 26000,
+                "tare_weight_kg": 4200,
+                "gross_weight_kg": 30400,
+                "note": "Payload = what you can actually ship"
+            },
+            "volume_limits": {
+                "max_volume_m3": 67.3,
+                "length_m": 12.032,
+                "width_m": 2.352,
+                "height_m": 2.385,
+                "note": "Internal dimensions for cargo"
+            },
+            "research_guidance": {
+                "weight_research": "Look up shipping line specifications - may vary 24,000-27,000 kg",
+                "volume_research": "Standard vs High Cube containers differ in height",
+                "practical_note": "Actual usable space depends on packaging and cargo type"
+            }
+        },
+        "alternative_containers": {
+            "40ft_standard": {"payload_kg": 26000, "volume_m3": 58.3},
+            "20ft_container": {"payload_kg": 21000, "volume_m3": 28.0}
+        },
+        "student_research_tips": [
+            "Check multiple shipping line websites for container specs",
+            "Consider weight distribution and loading constraints", 
+            "Account for packaging weight in your calculations",
+            "Research shows typical energy drink powder density: 450-650 kg/m³"
+        ]
+    }
+
+def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float, container_weight_capacity: float = None) -> Dict[str, Any]:
     """Calculate volume metrics for Phase 1 - backward compatible with existing app calls
     
     Args:
@@ -180,10 +245,14 @@ def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder
         powder_per_drink: Grams of powder needed per drink (from app.py) 
         powder_density: Density of powder in kg/L (from app.py)
         container_volume: Container volume in m³ (from app.py)
+        container_weight_capacity: Optional weight capacity in kg (new parameter)
     """
     
     # Get standard container specifications
     container_specs = get_container_specifications()["capacity"]
+    
+    # Use provided weight capacity or default
+    weight_capacity = container_weight_capacity if container_weight_capacity else container_specs["max_payload_kg"]
     
     # Convert powder_density from kg/L to kg/m³ if needed
     # Note: kg/L = 1000 * kg/m³, so if input is kg/L, multiply by 1000
@@ -194,25 +263,46 @@ def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder
     total_volume_m3 = total_powder_kg / powder_density_kg_m3
     
     # Calculate containers needed based on both weight and volume constraints
-    containers_by_weight = total_powder_kg / container_specs["max_payload_kg"]
+    containers_by_weight = total_powder_kg / weight_capacity
     containers_by_volume = total_volume_m3 / container_volume
     containers_needed = max(containers_by_weight, containers_by_volume)  # Limiting factor
     
+    # Determine limiting factor and utilization
+    limiting_factor = "weight" if containers_by_weight > containers_by_volume else "volume"
+    weight_utilization = (total_powder_kg / containers_needed / weight_capacity) * 100
+    volume_utilization = (total_volume_m3 / containers_needed / container_volume) * 100
+    
     return {
-        "drinks_target": drinks_target,
-        "powder_per_drink": powder_per_drink,
-        "total_powder_kg": total_powder_kg,
-        "total_volume_m3": total_volume_m3,
-        "powder_density_used": powder_density_kg_m3,
-        "container_specs": {
-            "max_payload_kg": container_specs["max_payload_kg"],
-            "max_volume_m3": container_volume,
-            "tare_weight_kg": container_specs["tare_weight_kg"]
+        "inputs": {
+            "drinks_target": drinks_target,
+            "powder_per_drink_grams": powder_per_drink,
+            "powder_density_kg_L": powder_density,
+            "container_volume_m3": container_volume,
+            "container_weight_capacity_kg": weight_capacity,
+            "used_custom_weight_capacity": container_weight_capacity is not None
         },
-        "containers_by_weight": containers_by_weight,
-        "containers_by_volume": containers_by_volume,
-        "containers_needed": containers_needed,
-        "limiting_factor": "weight" if containers_by_weight > containers_by_volume else "volume"
+        "calculations": {
+            "total_powder_kg": round(total_powder_kg, 2),
+            "total_volume_m3": round(total_volume_m3, 3),
+            "powder_density_kg_m3": powder_density_kg_m3,
+            "containers_by_weight": round(containers_by_weight, 2),
+            "containers_by_volume": round(containers_by_volume, 2),
+            "containers_needed": round(containers_needed, 2),
+            "limiting_factor": limiting_factor
+        },
+        "utilization": {
+            "weight_utilization_percent": round(weight_utilization, 1),
+            "volume_utilization_percent": round(volume_utilization, 1),
+            "efficiency_note": f"Container is limited by {limiting_factor}"
+        },
+        "container_research": {
+            "weight_capacity_used": weight_capacity,
+            "volume_capacity_used": container_volume,
+            "standard_reference": {
+                "standard_weight_capacity": container_specs["max_payload_kg"],
+                "standard_volume_capacity": container_specs["max_volume_m3"]
+            }
+        }
     }
 
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
