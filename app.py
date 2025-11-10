@@ -521,61 +521,6 @@ def assignment_page():
                 else:
                     st.info("Please fill in all values to see calculations")
         
-        elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
-            
-            with st.expander("Mode Comparison Calculator", expanded=True):
-                # Basic inputs without defaults
-                containers = st.number_input("Number of containers to ship", min_value=0.1, max_value=10.0, value=None, placeholder="Enter container count")
-                total_kg = st.number_input("Total weight (kg)", min_value=1000, max_value=50000, value=None, placeholder="Enter total weight")
-                
-                st.markdown("**Research Transportation Costs and Times:**")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.markdown("**Sea Freight**")
-                    sea_cost_per_container = st.number_input("Cost per container ($)", min_value=1000, max_value=10000, value=None, placeholder="Research sea freight cost", key="sea_cost")
-                    sea_days = st.number_input("Transit days", min_value=10, max_value=60, value=None, placeholder="Research transit time", key="sea_days")
-                
-                with col2:
-                    st.markdown("**Air Freight**")
-                    air_cost_per_kg = st.number_input("Cost per kg ($)", min_value=1, max_value=30, value=None, placeholder="Research air freight cost", key="air_cost")
-                    air_days = st.number_input("Transit days", min_value=1, max_value=14, value=None, placeholder="Research transit time", key="air_days")
-                
-                with col3:
-                    st.markdown("**Rail Freight**")
-                    rail_cost_per_container = st.number_input("Cost per container ($)", min_value=2000, max_value=15000, value=None, placeholder="Research rail freight cost", key="rail_cost")
-                    rail_days = st.number_input("Transit days", min_value=7, max_value=45, value=None, placeholder="Research transit time", key="rail_days")
-                
-                # Only show calculations if all values are provided
-                if all([containers, total_kg, sea_cost_per_container, sea_days, air_cost_per_kg, air_days, rail_cost_per_container, rail_days]):
-                    # Use modular calculation function
-                    costs = {
-                        'sea_per_container': sea_cost_per_container,
-                        'air_per_kg': air_cost_per_kg,
-                        'rail_per_container': rail_cost_per_container
-                    }
-                    cost_results = calculate_transport_costs(containers, total_kg, costs)
-                    
-                    st.markdown("**Cost Calculations:**")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Sea Total Cost", f"${cost_results['sea_total']:,.0f}")
-                        st.metric("Sea Cost per kg", f"${cost_results['sea_total']/total_kg:.2f}")
-                    with col2:
-                        st.metric("Air Total Cost", f"${cost_results['air_total']:,.0f}")
-                        st.metric("Air Cost per kg", f"${cost_results['air_total']/total_kg:.2f}")
-                    with col3:
-                        st.metric("Rail Total Cost", f"${cost_results['rail_total']:,.0f}")
-                        st.metric("Rail Cost per kg", f"${cost_results['rail_total']/total_kg:.2f}")
-                    
-                    # Save comparison results
-                    comparison_result = f"Transport Comparison - Sea: ${cost_results['sea_total']:,.0f} ({sea_days}d), Air: ${cost_results['air_total']:,.0f} ({air_days}d), Rail: ${cost_results['rail_total']:,.0f} ({rail_days}d)"
-                    
-                    if st.button("Save Transportation Analysis"):
-                        save_answer(st.session_state.get('student_email', ''), 98, comparison_result)
-                        st.success("Analysis saved!")
-                else:
-                    st.info("Please fill in all transportation research values to see calculations")
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
             # Assign a scenario using the modular function
