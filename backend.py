@@ -129,6 +129,18 @@ def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[st
     """Calculate transportation costs for Dragon Fire Phase 2"""
     return dragon_fire.calculate_transport_costs(containers, total_kg, costs)
 
+def calculate_transport_costs_enhanced(
+    containers: float, 
+    total_kg: float, 
+    total_volume_m3: float,
+    costs: Dict[str, float],
+    cost_of_capital_annual: float = 0.10
+) -> Dict[str, Any]:
+    """Enhanced transportation cost calculation with cost of capital and analysis factors"""
+    return dragon_fire.calculate_transport_costs_enhanced(
+        containers, total_kg, total_volume_m3, costs, cost_of_capital_annual
+    )
+
 # Section-specific functions for 7-Eleven case
 def validate_numeric_answer(task: str, value: float) -> tuple[bool, str]:
     """Validate numeric answers for 7-Eleven case"""

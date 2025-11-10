@@ -12,7 +12,7 @@ def get_assignment_questions() -> List[str]:
         "Phase 1: Market and Volume Estimation\n\nDesign the supply chain for Dragon Fire energy drink from Germany to China.\n\n**Case Background**: Blue Dragon (German startup) wants to launch Dragon Fire energy drink in China as their first market. Initially targeting bars and restaurants only (no supermarkets yet) at 25 Yuan (~3.30€) per drink, with future supermarket price of 10 Yuan (~1.30€). Two variants: with sugar and sugar-free.\n\n**Your Task**: Conduct a Market and volume estimate:\n\n1. **Sales Estimation**: Based on the case description, you need to provide an estimate of how many units of drinks Blue Dragon will sell in Year 1.\n   You also need to provide a reasonable estimate for how many grams of powder each unit will require.\n\n"
         "2. Aparrt from weight, volume is also essential, so the density of the powder is needed to calculate space requirements.\n   Please use the tool to derive:\n   - Total powder needed (kg)\n   - Estimated weight and volume limit of a 40ft container in kg payload and in cubic meters (research appropriate powder density)\n   - Number of standard shipping containers needed when using rail or sea transportation",
 
-        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. Show your work in Euros.\n\n2. **Mode Evaluation**: Given this is a startup with unproven market demand, choose your preferred transportation mode and justify with 3 specific reasons considering:\n   - Cost efficiency vs. market uncertainty\n   - Speed to market for product launch\n   - Financial risk management\n   - Flexibility for demand changes",
+        "Phase 2: Transportation Mode Comparison\n\nCompare different ways to get Dragon Fire powder from Germany to China.\n\n**Available Options**:\n- **Sea Freight**: 30 days, €400 per 40ft container\n- **Air Freight**: 3 days, €1.50 per kg\n- **Rail Freight**: 15 days, €3,000 per 40ft container\n- **Multimodal**: Combinations of above\n\n**Your Analysis**:\n\n1. **Cost Calculation**: For your powder volume from Phase 1, calculate the transportation cost for each mode. You also need to make a reasonable presumption for the cost of capital.\n\n2. **Mode Evaluation**: Based on the following factors, choose your preferred transportation mode and justify with 3 specific reasons:\n   - Cost\n   - Speed to market\n   - Reliability\n   - Risk level\n   - Environmental impact",
 
         "Phase 3: Supply Chain Design\n\nDesign your complete China operation for this startup market entry.\n\n**Key Decisions to Make**:\n\n1. **Entry Port Selection**:\n   - Compare Shanghai, Ningbo, and Shenzhen ports\n   - Consider: proximity to target bar/restaurant markets, port efficiency, inland transport costs\n   - Choose one port and justify your selection\n\n2. **Mixing/Bottling Facility Location**:\n   - Where in China will you mix powder with water and bottle/can the drinks?\n   - Consider: labor costs, regulations, proximity to bars/restaurants, water quality, startup budget constraints\n   - Identify 2-3 potential cities and rank them\n\n3. **Distribution Strategy**:\n   - How will finished drinks reach bars/clubs/restaurants in major Chinese cities?\n   - Design your distribution network considering limited initial market (no supermarkets)\n   - Calculate approximate delivery radius and frequency for bar/restaurant channel\n\n4. **Inventory Planning for Startup**:\n   - How much safety stock should a startup maintain with unproven demand?\n   - Where should inventory be held (port, factory, regional centers)?\n   - Consider cash flow constraints and demand uncertainty\n\n**Deliverable**: Create a simple supply chain map showing: Germany production → transport → China port → mixing facility → distribution → bars/restaurants",
 
@@ -382,6 +382,115 @@ def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder
                 "standard_volume_capacity": container_specs["max_volume_m3"]
             }
         }
+    }
+
+def calculate_transport_costs_enhanced(
+    containers: float, 
+    total_kg: float, 
+    total_volume_m3: float,
+    costs: Dict[str, float],
+    cost_of_capital_annual: float = 0.10  # Default 10% annual cost of capital
+) -> Dict[str, Any]:
+    """Enhanced transportation cost calculation including cost of capital and comprehensive analysis"""
+    
+    # Transportation costs
+    sea_transport_cost = containers * costs.get('sea_per_container', 400)
+    air_transport_cost = total_kg * costs.get('air_per_kg', 1.50)
+    rail_transport_cost = containers * costs.get('rail_per_container', 3000)
+    
+    # Transit times (days)
+    transit_times = {
+        'sea': 30,
+        'air': 3,
+        'rail': 15
+    }
+    
+    # Calculate cost of capital for inventory in transit
+    # Assume powder value of €10 per kg for cost of capital calculation
+    powder_value_per_kg = 10  # Students should adjust this
+    total_inventory_value = total_kg * powder_value_per_kg
+    daily_capital_cost = (cost_of_capital_annual / 365) * total_inventory_value
+    
+    sea_capital_cost = daily_capital_cost * transit_times['sea']
+    air_capital_cost = daily_capital_cost * transit_times['air']
+    rail_capital_cost = daily_capital_cost * transit_times['rail']
+    
+    # Total costs (transport + cost of capital)
+    sea_total_cost = sea_transport_cost + sea_capital_cost
+    air_total_cost = air_transport_cost + air_capital_cost
+    rail_total_cost = rail_transport_cost + rail_capital_cost
+    
+    return {
+        "transportation_costs": {
+            "sea_transport": round(sea_transport_cost, 2),
+            "air_transport": round(air_transport_cost, 2),
+            "rail_transport": round(rail_transport_cost, 2)
+        },
+        "cost_of_capital": {
+            "sea_capital": round(sea_capital_cost, 2),
+            "air_capital": round(air_capital_cost, 2),
+            "rail_capital": round(rail_capital_cost, 2),
+            "annual_rate_used": cost_of_capital_annual,
+            "inventory_value_assumed": total_inventory_value
+        },
+        "total_costs": {
+            "sea_total": round(sea_total_cost, 2),
+            "air_total": round(air_total_cost, 2),
+            "rail_total": round(rail_total_cost, 2)
+        },
+        "cost_per_kg": {
+            "sea_per_kg": round(sea_total_cost / total_kg, 2),
+            "air_per_kg": round(air_total_cost / total_kg, 2),
+            "rail_per_kg": round(rail_total_cost / total_kg, 2)
+        },
+        "efficiency_metrics": {
+            "containers_used": round(containers, 2),
+            "weight_kg": round(total_kg, 2),
+            "volume_m3": round(total_volume_m3, 3),
+            "weight_per_container": round(total_kg / containers, 2) if containers > 0 else 0,
+            "volume_per_container": round(total_volume_m3 / containers, 2) if containers > 0 else 0
+        },
+        "transit_analysis": {
+            "sea_days": transit_times['sea'],
+            "air_days": transit_times['air'],
+            "rail_days": transit_times['rail'],
+            "time_savings_air_vs_sea": transit_times['sea'] - transit_times['air'],
+            "time_savings_rail_vs_sea": transit_times['sea'] - transit_times['rail']
+        },
+        "evaluation_factors": {
+            "cost_ranking": get_cost_ranking(sea_total_cost, air_total_cost, rail_total_cost),
+            "speed_ranking": {"fastest": "Air (3 days)", "medium": "Rail (15 days)", "slowest": "Sea (30 days)"},
+            "reliability_notes": {
+                "sea": "Weather dependent, port congestion risk",
+                "air": "High reliability, limited cargo space",
+                "rail": "Moderate reliability, infrastructure dependent"
+            },
+            "risk_factors": {
+                "sea": ["Suez Canal blockage", "Port strikes", "Weather delays"],
+                "air": ["Limited capacity", "High cost volatility", "Airport restrictions"],
+                "rail": ["Infrastructure issues", "Border delays", "Capacity constraints"]
+            },
+            "environmental_impact": {
+                "sea": "Lowest CO2 per kg",
+                "rail": "Medium CO2 per kg", 
+                "air": "Highest CO2 per kg"
+            }
+        }
+    }
+
+def get_cost_ranking(sea_cost: float, air_cost: float, rail_cost: float) -> Dict[str, str]:
+    """Rank transportation modes by total cost"""
+    costs = [
+        ("Sea", sea_cost),
+        ("Air", air_cost), 
+        ("Rail", rail_cost)
+    ]
+    costs.sort(key=lambda x: x[1])
+    
+    return {
+        "cheapest": f"{costs[0][0]} (€{costs[0][1]:,.2f})",
+        "medium": f"{costs[1][0]} (€{costs[1][1]:,.2f})",
+        "most_expensive": f"{costs[2][0]} (€{costs[2][1]:,.2f})"
     }
 
 def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
