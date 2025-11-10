@@ -172,34 +172,41 @@ def calculate_volume_metrics_with_estimates(
         "standard_container_reference": standard_specs
     }
 
-def calculate_volume_metrics(drinks_estimate: int, powder_per_drink_grams: float, powder_density_kg_m3: float, container_volume_m3: float = None) -> Dict[str, Any]:
-    """Calculate volume metrics for Phase 1 with student estimates - backward compatible"""
+def calculate_volume_metrics(drinks_target: int, powder_per_drink: float, powder_density: float, container_volume: float) -> Dict[str, Any]:
+    """Calculate volume metrics for Phase 1 - backward compatible with existing app calls
+    
+    Args:
+        drinks_target: Number of drinks estimated for Year 1 (from app.py)
+        powder_per_drink: Grams of powder needed per drink (from app.py) 
+        powder_density: Density of powder in kg/L (from app.py)
+        container_volume: Container volume in m³ (from app.py)
+    """
     
     # Get standard container specifications
     container_specs = get_container_specifications()["capacity"]
     
-    # Use provided container volume or default to standard 40ft container
-    if container_volume_m3 is None:
-        container_volume_m3 = container_specs["max_volume_m3"]
+    # Convert powder_density from kg/L to kg/m³ if needed
+    # Note: kg/L = 1000 * kg/m³, so if input is kg/L, multiply by 1000
+    powder_density_kg_m3 = powder_density * 1000  # Convert kg/L to kg/m³
     
     # Calculate total requirements
-    total_powder_kg = (drinks_estimate * powder_per_drink_grams) / 1000
+    total_powder_kg = (drinks_target * powder_per_drink) / 1000  # Convert grams to kg
     total_volume_m3 = total_powder_kg / powder_density_kg_m3
     
     # Calculate containers needed based on both weight and volume constraints
     containers_by_weight = total_powder_kg / container_specs["max_payload_kg"]
-    containers_by_volume = total_volume_m3 / container_volume_m3
+    containers_by_volume = total_volume_m3 / container_volume
     containers_needed = max(containers_by_weight, containers_by_volume)  # Limiting factor
     
     return {
-        "drinks_estimate": drinks_estimate,
-        "powder_per_drink_grams": powder_per_drink_grams,
+        "drinks_target": drinks_target,
+        "powder_per_drink": powder_per_drink,
         "total_powder_kg": total_powder_kg,
         "total_volume_m3": total_volume_m3,
         "powder_density_used": powder_density_kg_m3,
         "container_specs": {
             "max_payload_kg": container_specs["max_payload_kg"],
-            "max_volume_m3": container_volume_m3,
+            "max_volume_m3": container_volume,
             "tare_weight_kg": container_specs["tare_weight_kg"]
         },
         "containers_by_weight": containers_by_weight,
