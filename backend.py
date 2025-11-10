@@ -129,6 +129,10 @@ def get_phase2_guidance() -> Dict[str, Any]:
     """Get guidance for Phase 2 transportation mode analysis"""
     return dragon_fire.get_phase2_guidance()
 
+def calculate_transport_costs(containers: float, total_kg: float, costs: Dict[str, float]) -> Dict[str, float]:
+    """Calculate transportation costs for Dragon Fire Phase 2 - basic version for compatibility"""
+    return dragon_fire.calculate_transport_costs(containers, total_kg, costs)
+
 def collect_phase2_inputs(
     containers: float,
     total_weight_kg: float,
