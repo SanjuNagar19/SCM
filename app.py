@@ -533,10 +533,17 @@ def assignment_page():
                 with col1:
                     containers = st.number_input("Number of containers:", value=0.0, min_value=0.0, format="%.2f", key="phase2_containers")
                     total_weight = st.number_input("Total weight (kg):", value=0.0, min_value=0.0, format="%.2f", key="phase2_weight")
+                    total_volume = st.number_input("Total volume (m³):", value=0.0, min_value=0.0, format="%.3f", key="phase2_volume")
                 
                 with col2:
-                    total_volume = st.number_input("Total volume (m³):", value=0.0, min_value=0.0, format="%.3f", key="phase2_volume")
-                    wacc_rate = st.number_input("WACC rate (as decimal, e.g., 0.15 for 15%):", value=0.0, min_value=0.0, max_value=0.30, format="%.3f", key="phase2_wacc")
+                    wacc_rate = st.number_input("WACC rate (as decimal, e.g., 0.15 for 15%):", value=0.15, min_value=0.01, max_value=0.30, format="%.3f", key="phase2_wacc")
+                    transport_cost = st.number_input("Transport cost (€) for selected mode:", value=0.0, min_value=0.0, format="%.2f", key="phase2_transport_cost")
+                    total_cost = st.number_input("Total cost (€) including capital cost:", value=0.0, min_value=0.0, format="%.2f", key="phase2_total_cost")
+                
+                # Mode selection for context
+                selected_mode = st.selectbox("Selected transportation mode:", 
+                                           options=["", "Sea Freight", "Air Freight", "Rail Freight"], 
+                                           key="phase2_selected_mode")
                 
                 # Save inputs button
                 if st.button("Save Phase 2 Inputs"):
@@ -545,8 +552,15 @@ def assignment_page():
                         result = collect_phase2_inputs(containers, total_weight, total_volume, wacc_rate)
                         
                         if result["validation"]["valid"]:
-                            # Save the inputs as the answer for this phase
+                            # Enhanced input summary including new fields
                             input_summary = f"Containers: {containers:.2f}, Weight: {total_weight:.2f} kg, Volume: {total_volume:.3f} m³, WACC: {wacc_rate:.3f} ({wacc_rate*100:.1f}%)"
+                            if selected_mode:
+                                input_summary += f", Selected Mode: {selected_mode}"
+                            if transport_cost > 0:
+                                input_summary += f", Transport Cost: €{transport_cost:.2f}"
+                            if total_cost > 0:
+                                input_summary += f", Total Cost: €{total_cost:.2f}"
+                            
                             save_answer(st.session_state.get('student_email', ''), current_idx, input_summary)
                             st.success("Phase 2 inputs saved successfully!")
                             
@@ -556,12 +570,12 @@ def assignment_page():
                             st.markdown("- Air Freight: €1.50 per kg, 3 days transit") 
                             st.markdown("- Rail Freight: €3,000 per 40ft container, 15 days transit")
                             
-                            st.info("Now calculate costs and perform your mode evaluation analysis in the text area below.")
+                            st.info("Now perform your mode evaluation analysis in the text area below.")
                         else:
                             for error in result["validation"]["errors"]:
                                 st.error(error)
                     else:
-                        st.warning("Please enter valid values for all fields (all must be greater than 0)")
+                        st.warning("Please enter valid values for all required fields (containers, weight, volume, WACC must be greater than 0)")
         
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
