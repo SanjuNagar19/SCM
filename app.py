@@ -523,7 +523,7 @@ def assignment_page():
                     st.info("Please fill in all values to see calculations")
         
         elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
-            st.info("**Phase 2**: Enter your analysis values and perform transportation mode comparison")
+            st.info("**Enter your analysis values and perform transportation mode comparison")
             
             # Add input collection for Phase 2
             with st.expander("Transportation Analysis Inputs", expanded=True):
