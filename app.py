@@ -21,6 +21,7 @@ from backend import (
     assign_scenario,
     calculate_volume_metrics,
     calculate_transport_costs,
+    collect_phase2_inputs,
     # Section management
     set_current_section,
 )
@@ -520,6 +521,47 @@ def assignment_page():
                         st.success("Calculation saved!")
                 else:
                     st.info("Please fill in all values to see calculations")
+        
+        elif current_idx == 1:  # Phase 2: Transportation Mode Comparison
+            st.info("**Phase 2**: Enter your analysis values and perform transportation mode comparison")
+            
+            # Add input collection for Phase 2
+            with st.expander("Transportation Analysis Inputs", expanded=True):
+                st.markdown("**Enter your values for transportation mode analysis:**")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    containers = st.number_input("Number of containers:", value=0.0, min_value=0.0, format="%.2f", key="phase2_containers")
+                    total_weight = st.number_input("Total weight (kg):", value=0.0, min_value=0.0, format="%.2f", key="phase2_weight")
+                
+                with col2:
+                    total_volume = st.number_input("Total volume (m³):", value=0.0, min_value=0.0, format="%.3f", key="phase2_volume")
+                    wacc_rate = st.number_input("WACC rate (as decimal, e.g., 0.15 for 15%):", value=0.0, min_value=0.01, max_value=0.30, format="%.3f", key="phase2_wacc")
+                
+                # Save inputs button
+                if st.button("Save Phase 2 Inputs"):
+                    if containers > 0 and total_weight > 0 and total_volume > 0 and wacc_rate > 0:
+                        # Use the modular function to validate and process inputs
+                        result = collect_phase2_inputs(containers, total_weight, total_volume, wacc_rate)
+                        
+                        if result["validation"]["valid"]:
+                            # Save the inputs as the answer for this phase
+                            input_summary = f"Containers: {containers:.2f}, Weight: {total_weight:.2f} kg, Volume: {total_volume:.3f} m³, WACC: {wacc_rate:.3f} ({wacc_rate*100:.1f}%)"
+                            save_answer(st.session_state.get('student_email', ''), current_idx, input_summary)
+                            st.success("Phase 2 inputs saved successfully!")
+                            
+                            # Show transportation rates for reference
+                            st.markdown("**Transportation Rates for Your Analysis:**")
+                            st.markdown("- Sea Freight: €400 per 40ft container, 30 days transit")
+                            st.markdown("- Air Freight: €1.50 per kg, 3 days transit") 
+                            st.markdown("- Rail Freight: €3,000 per 40ft container, 15 days transit")
+                            
+                            st.info("Now calculate costs and perform your mode evaluation analysis in the text area below.")
+                        else:
+                            for error in result["validation"]["errors"]:
+                                st.error(error)
+                    else:
+                        st.warning("Please enter valid values for all fields (all must be greater than 0)")
         
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
