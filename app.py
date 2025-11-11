@@ -625,7 +625,27 @@ def assignment_page():
             if can_proceed:
                 if st.button("Next"):
                     # save current answer before moving on
-                    save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
+                    current_answer = st.session_state.get(f"ans_{current_idx}", "")
+                    
+                    # For Dragon Fire Phase 2, combine input data with text area if both exist
+                    if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
+                        # Check if Phase 2 inputs were already saved
+                        from backend import get_answers_by_email
+                        existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
+                        phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
+                        
+                        if phase2_input_saved and current_answer.strip():
+                            # Combine the existing input data with the text area analysis
+                            phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
+                            combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
+                            save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
+                        elif current_answer.strip():
+                            # Just save the text area if no inputs were saved
+                            save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                    else:
+                        # For all other questions, save normally
+                        save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                    
                     st.session_state['question_idx'] += 1
                     # Clear chat history when moving to new question
                     st.session_state['chat_history'] = []
@@ -642,11 +662,37 @@ def assignment_page():
         else:
             # Last question - show final submit button instead of completion message
             if st.button("Submit Final Assignment", type="primary"):
-                # Save current answer
-                save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
+                # Save current answer with special handling for Dragon Fire Phase 2
+                current_answer = st.session_state.get(f"ans_{current_idx}", "")
                 
-                # Optional: Mark assignment as completed
+                if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
+                    # Check if Phase 2 inputs were already saved
+                    from backend import get_answers_by_email
+                    existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
+                    phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
+                    
+                    if phase2_input_saved and current_answer.strip():
+                        # Combine the existing input data with the text area analysis
+                        phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
+                        combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
+                        save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
+                    elif current_answer.strip():
+                        # Just save the text area if no inputs were saved
+                        save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                else:
+                    # For all other questions, save normally
+                    save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                
+                # Mark assignment as completed
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
+                
+                # Show completion message
+                st.success("🎉 Assignment submitted successfully!")
+                st.balloons()
+                
+                # Optional: move to a completion state or reset
+                time.sleep(2)
+                st.rerun()
             
             
     st.markdown("---")
@@ -797,7 +843,7 @@ def admin_page():
                         col1, col2, col3 = st.columns([2, 1, 1])
                         
                         with col1:
-                            grade_options = ["", "A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "Pass", "Fail", "Incomplete"]
+                            grade_options = ["", "5", "4.5", "4", "3.5", "3", "2.5", "2", "1.5", "1", "0.5", "0"]
                             current_idx = grade_options.index(current_grade) if current_grade in grade_options else 0
                             new_grade = st.selectbox(
                                 "Grade:", 
