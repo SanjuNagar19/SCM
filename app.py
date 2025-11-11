@@ -590,12 +590,6 @@ def assignment_page():
                 st.markdown("**Key Impacts**:")
                 for impact in assigned_scenario['impacts']:
                     st.markdown(f"• {impact}")
-            
-            # Save the assigned scenario
-            scenario_result = f"Assigned Scenario: {assigned_scenario['title']} - {assigned_scenario['description']}"
-            if st.button("Confirm Scenario Assignment"):
-                save_answer(st.session_state.get('student_email', ''), 97, scenario_result)
-                st.success(f"Scenario assigned: {assigned_scenario['title']}")
     
     # For all sections except Dragon Fire Case Phase 1 Q1, show the regular text area for answers
     if not (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 0):
