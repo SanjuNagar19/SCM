@@ -573,14 +573,6 @@ def assignment_page():
                             
                             save_answer(st.session_state.get('student_email', ''), current_idx, input_summary)
                             st.success("Phase 2 inputs saved successfully!")
-                            
-                            # Show transportation rates for reference
-                            st.markdown("**Transportation Rates for Your Analysis:**")
-                            st.markdown("- Sea Freight: €400 per 40ft container, 30 days transit")
-                            st.markdown("- Air Freight: €1.50 per kg, 3 days transit") 
-                            st.markdown("- Rail Freight: €3,000 per 40ft container, 15 days transit")
-                            
-                            st.info("Now perform your mode evaluation analysis in the text area below.")
                         else:
                             for error in result["validation"]["errors"]:
                                 st.error(error)
@@ -653,8 +645,6 @@ def assignment_page():
                 # Save current answer
                 save_answer(st.session_state.get('student_email', ''), current_idx, st.session_state.get(f"ans_{current_idx}", ""))
                 
-                st.balloons()
-                
                 # Optional: Mark assignment as completed
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
             
@@ -697,7 +687,6 @@ def assignment_page():
                     del st.session_state[key]
             
             st.success("Successfully logged out!")
-            st.balloons()
             time.sleep(1)
             st.rerun()
         
