@@ -536,7 +536,7 @@ def assignment_page():
                 
                 with col2:
                     total_volume = st.number_input("Total volume (m³):", value=0.0, min_value=0.0, format="%.3f", key="phase2_volume")
-                    wacc_rate = st.number_input("WACC rate (as decimal, e.g., 0.15 for 15%):", value=0.15, min_value=0.01, max_value=0.30, format="%.3f", key="phase2_wacc")
+                    wacc_rate = st.number_input("WACC rate (as decimal, e.g., 0.15 for 15%):", value=0.00, min_value=0.01, max_value=0.30, format="%.3f", key="phase2_wacc")
                 
                 # Save inputs button
                 if st.button("Save Phase 2 Inputs"):
