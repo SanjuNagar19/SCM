@@ -368,10 +368,28 @@ def student_info_page():
         st.session_state['student_email'] = email
         email_clean = email.strip().lower()
         if name and email_clean.endswith("@whu.edu"):
-            st.session_state['info_complete'] = True
-            # persist student
-            save_student(name, email_clean)
-            st.rerun()
+            # Check if this email has already been used
+            existing_students = get_all_students()
+            email_already_exists = any(student[0].lower().strip() == email_clean for student in existing_students if student[0])
+            
+            if email_already_exists:
+                st.error(f" **Login Restricted**: The email '{email_clean}' has already been used for this assignment.")
+                st.warning("**Each email address is allowed only one login attempt.** If you need to resume your work, please contact your instructor.")
+                st.info("**Note**: This restriction ensures academic integrity and prevents multiple submissions from the same student.")
+                
+                # Show when the original login happened
+                for student in existing_students:
+                    if student[0] and student[0].lower().strip() == email_clean:
+                        created_at = student[3] if len(student) > 3 else "unknown time"
+                        st.caption(f"Original login: {created_at}")
+                        break
+            else:
+                # New email - allow login
+                st.session_state['info_complete'] = True
+                # persist student
+                save_student(name, email_clean)
+                st.success(f"Welcome {name}! You have been successfully logged in.")
+                st.rerun()
         else:
             st.session_state['info_complete'] = False
             st.warning("Please enter your name, and a valid WHU email (ending with @whu.edu) to start the assignment.")
