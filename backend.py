@@ -137,12 +137,12 @@ def collect_phase2_inputs(
     containers: float,
     total_weight_kg: float,
     total_volume_m3: float, 
-    wacc_rate: float,
-    powder_value_per_kg: float = None
+    wacc_rate: float
 ) -> Dict[str, Any]:
     """Collect and validate Phase 2 inputs for student analysis"""
+    # Call dragon_fire module function with correct parameters
     return dragon_fire.collect_phase2_inputs(
-        containers, total_weight_kg, total_volume_m3, wacc_rate, powder_value_per_kg
+        containers, total_weight_kg, total_volume_m3, wacc_rate
     )
 
 def save_phase2_inputs(
