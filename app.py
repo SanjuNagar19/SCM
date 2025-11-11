@@ -500,6 +500,16 @@ def assignment_page():
                         powder_density = st.number_input("Powder density (kg/L)", min_value=0.1, max_value=2.0, value=None, placeholder="Research and enter density")
                         container_volume = st.number_input("Container volume (m³)", min_value=1, max_value=100, value=None, placeholder="Research container sizes")
                 
+                    # Save Phase 1 inputs button (always available)
+                    if st.button("Save Phase 1 Inputs"):
+                        if drinks_target and powder_per_drink and powder_density and container_volume:
+                            # Create input summary
+                            input_summary = f"Drinks Target: {drinks_target:,}, Powder per drink: {powder_per_drink}g, Density: {powder_density} kg/L, Container Volume: {container_volume} m³"
+                            save_answer(st.session_state.get('student_email', ''), current_idx, input_summary)
+                            st.success("Phase 1 inputs saved successfully!")
+                        else:
+                            st.warning("Please enter values for all fields before saving")
+                
                 # Only show calculations if all values are provided
                 if drinks_target and powder_per_drink and powder_density and container_volume:
                     # Use modular calculation function
@@ -514,11 +524,11 @@ def assignment_page():
                     with col3:
                         st.metric("Containers", f"{metrics['containers_needed']:.1f}")
                     
-                    # Save calculation results for grading
-                    calc_result = f"Volume Calculator: {drinks_target:,} drinks → {metrics['total_powder_kg']:,.0f} kg → {metrics['total_volume_m3']:.1f} m³ → {metrics['containers_needed']:.1f} containers"
-                    if st.button("Save Volume Calculation"):
+                    # Additional save option for calculated results
+                    calc_result = f"Volume Calculator Results: {drinks_target:,} drinks → {metrics['total_powder_kg']:,.0f} kg → {metrics['total_volume_m3']:.1f} m³ → {metrics['containers_needed']:.1f} containers"
+                    if st.button("Save Calculation Results"):
                         save_answer(st.session_state.get('student_email', ''), 99, calc_result)  # Special index for calculations
-                        st.success("Calculation saved!")
+                        st.success("Calculation results saved!")
                 else:
                     st.info("Please fill in all values to see calculations")
         
