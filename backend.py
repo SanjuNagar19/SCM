@@ -1,5 +1,6 @@
 # Modular Backend - Main entry point for supply chain learning modules
 from typing import List, Optional, Dict, Any
+import logging
 from modules.base import (
     set_config, 
     check_rate_limit, 
@@ -17,7 +18,9 @@ from modules.base import (
     get_grades_by_email,
     get_latest_grade,
     get_user_queries,
-    logger
+    logger,
+    validate_email,
+    validate_text_input
 )
 
 # Import all modules
@@ -80,12 +83,34 @@ def get_assignment_questions(section: str = "Ch.3") -> List[str]:
         return ["No assignments available for this section yet."]
 
 def answer_query(query: str, assignment_context: str = "", section: str = "Ch.3", user_email: str = "") -> str:
-    """Answer user query using the appropriate section module"""
-    module = SECTION_MODULES.get(section)
-    if module and hasattr(module, 'answer_query'):
-        return module.answer_query(query, assignment_context, user_email)
-    else:
-        return f"Section '{section}' is not available."
+    """Answer user query using the appropriate section module with security validation"""
+    try:
+        # Validate user email
+        if user_email:
+            email_valid, email_clean = validate_email(user_email)
+            if not email_valid:
+                logger.warning(f"Invalid email in answer_query: {user_email}")
+                return "Authentication error. Please log in again."
+            user_email = email_clean
+        
+        # Validate query input
+        query_valid, query_clean = validate_text_input(query, max_length=2000, field_name="Query")
+        if not query_valid:
+            logger.warning(f"Invalid query from {user_email}: {query_clean}")
+            return "Invalid query. Please check your input and try again."
+        
+        # Get the appropriate module
+        module = SECTION_MODULES.get(section)
+        if module and hasattr(module, 'answer_query'):
+            return module.answer_query(query_clean, assignment_context, user_email)
+        else:
+            logger.warning(f"Attempted access to unavailable section: {section}")
+            return f"Section '{section}' is not available."
+    
+    except Exception as e:
+        # Log detailed error for debugging but don't expose to user
+        logger.error(f"Error in answer_query for {user_email}: {str(e)}")
+        return "Sorry, I encountered an error processing your query. Please try again."
 
 # Section-specific functions for Dragon Fire case
 def get_disruption_scenarios() -> Dict[int, Dict[str, Any]]:
@@ -211,39 +236,102 @@ def get_current_section() -> str:
 
 # Export convenience functions for database operations that need section context
 def save_answer_with_section(email: str, question_idx: int, answer: str, section: str = None):
-    """Save answer with section context"""
-    section = section or _current_section
-    save_answer(email, question_idx, answer, section)
+    """Save answer with section context and validation"""
+    try:
+        section = section or _current_section
+        save_answer(email, question_idx, answer, section)
+    except Exception as e:
+        logger.error(f"Error in save_answer_with_section: {e}")
+        raise ValueError("Failed to save answer. Please try again.")
 
 def save_chat_with_section(email: str, question: str, bot_response: str, section: str = None):
-    """Save chat with section context"""
-    section = section or _current_section
-    save_chat(email, question, bot_response, section)
+    """Save chat with section context and validation"""
+    try:
+        section = section or _current_section
+        save_chat(email, question, bot_response, section)
+    except Exception as e:
+        logger.error(f"Error in save_chat_with_section: {e}")
+        raise ValueError("Failed to save chat. Please try again.")
 
 def save_grade_with_section(email: str, question_idx: int, grade: str, section: str = None):
-    """Save grade with section context"""
-    section = section or _current_section
-    save_grade(email, question_idx, grade, section)
+    """Save grade with section context and validation"""
+    try:
+        section = section or _current_section
+        
+        # Validate grade value
+        valid_grades = ['0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5']
+        if grade not in valid_grades:
+            raise ValueError(f"Invalid grade: {grade}")
+        
+        save_grade(email, question_idx, grade, section)
+    except Exception as e:
+        logger.error(f"Error in save_grade_with_section: {e}")
+        raise ValueError("Failed to save grade. Please check the grade value.")
 
 def get_answers_by_email_with_section(email: str, section: str = None):
-    """Get answers with section context"""
-    section = section or _current_section
-    return get_answers_by_email(email, section)
+    """Get answers with section context and validation"""
+    try:
+        # Validate email input
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.warning(f"Invalid email in get_answers_by_email_with_section: {email}")
+            return []
+        
+        section = section or _current_section
+        return get_answers_by_email(email_clean, section)
+    except Exception as e:
+        logger.error(f"Error in get_answers_by_email_with_section: {e}")
+        return []
 
 def get_chats_by_email_with_section(email: str, section: str = None):
-    """Get chats with section context"""
-    section = section or _current_section
-    return get_chats_by_email(email, section)
+    """Get chats with section context and validation"""
+    try:
+        # Validate email input
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.warning(f"Invalid email in get_chats_by_email_with_section: {email}")
+            return []
+        
+        section = section or _current_section
+        return get_chats_by_email(email_clean, section)
+    except Exception as e:
+        logger.error(f"Error in get_chats_by_email_with_section: {e}")
+        return []
 
 def get_grades_by_email_with_section(email: str, section: str = None):
-    """Get grades with section context"""
-    section = section or _current_section
-    return get_grades_by_email(email, section)
+    """Get grades with section context and validation"""
+    try:
+        # Validate email input
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.warning(f"Invalid email in get_grades_by_email_with_section: {email}")
+            return []
+        
+        section = section or _current_section
+        return get_grades_by_email(email_clean, section)
+    except Exception as e:
+        logger.error(f"Error in get_grades_by_email_with_section: {e}")
+        return []
 
 def get_latest_grade_with_section(email: str, question_idx: int, section: str = None):
-    """Get latest grade with section context"""
-    section = section or _current_section
-    return get_latest_grade(email, question_idx, section)
+    """Get latest grade with section context and validation"""
+    try:
+        # Validate email input
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.warning(f"Invalid email in get_latest_grade_with_section: {email}")
+            return None
+        
+        # Validate question index
+        if not isinstance(question_idx, int) or question_idx < 0 or question_idx > 100:
+            logger.warning(f"Invalid question index: {question_idx}")
+            return None
+        
+        section = section or _current_section
+        return get_latest_grade(email_clean, question_idx, section)
+    except Exception as e:
+        logger.error(f"Error in get_latest_grade_with_section: {e}")
+        return None
 
 # Expose _user_queries for admin dashboard compatibility
 _user_queries = get_user_queries()

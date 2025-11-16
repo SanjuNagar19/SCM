@@ -28,8 +28,69 @@ from backend import (
 import pandas as pd
 import os
 import time
+import hashlib
+import hmac
+import secrets
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Supply Chain Learning", layout="wide")
+
+# --- Security Functions ---
+# Admin login attempt tracking for rate limiting
+if 'admin_login_attempts' not in st.session_state:
+    st.session_state['admin_login_attempts'] = {}
+if 'admin_session_token' not in st.session_state:
+    st.session_state['admin_session_token'] = None
+
+def check_admin_rate_limit(client_id="default"):
+    """Check admin login rate limiting (prevent brute force)"""
+    current_time = time.time()
+    attempts = st.session_state['admin_login_attempts'].get(client_id, [])
+    
+    # Remove attempts older than 15 minutes
+    recent_attempts = [t for t in attempts if current_time - t < 900]
+    st.session_state['admin_login_attempts'][client_id] = recent_attempts
+    
+    # Allow max 5 attempts per 15 minutes
+    if len(recent_attempts) >= 5:
+        return False, f"Too many login attempts. Please wait {int(900 - (current_time - min(recent_attempts)))} seconds."
+    
+    return True, ""
+
+def record_admin_attempt(client_id="default"):
+    """Record an admin login attempt"""
+    if client_id not in st.session_state['admin_login_attempts']:
+        st.session_state['admin_login_attempts'][client_id] = []
+    st.session_state['admin_login_attempts'][client_id].append(time.time())
+
+def secure_admin_login(provided_password, correct_password):
+    """Secure admin authentication with constant-time comparison"""
+    try:
+        # Generate salt for this session if not exists
+        if 'admin_salt' not in st.session_state:
+            st.session_state['admin_salt'] = secrets.token_hex(32)
+        
+        salt = st.session_state['admin_salt']
+        
+        # Create hashes with salt
+        provided_hash = hashlib.pbkdf2_hmac('sha256', provided_password.encode(), salt.encode(), 100000)
+        correct_hash = hashlib.pbkdf2_hmac('sha256', correct_password.encode(), salt.encode(), 100000)
+        
+        # Constant time comparison to prevent timing attacks
+        is_valid = hmac.compare_digest(provided_hash, correct_hash)
+        
+        if is_valid:
+            # Generate secure session token
+            st.session_state['admin_session_token'] = secrets.token_hex(32)
+            
+        return is_valid
+    except Exception as e:
+        # Log error but don't expose details to user
+        st.error("Authentication error. Please try again.")
+        return False
 
 # --- Configuration Setup ---
 def setup_config():
@@ -245,8 +306,6 @@ if 'student_name' not in st.session_state:
     st.session_state['student_name'] = ""
 if 'student_email' not in st.session_state:
     st.session_state['student_email'] = ""
-if 'student_roll_number' not in st.session_state:
-    st.session_state['student_roll_number'] = ""
 if 'admin_login_mode' not in st.session_state:
     st.session_state['admin_login_mode'] = False
 if 'admin_logged_in' not in st.session_state:
@@ -254,12 +313,18 @@ if 'admin_logged_in' not in st.session_state:
 if 'admin_login_time' not in st.session_state:
     st.session_state['admin_login_time'] = None
 
-# Check admin session timeout (30 minutes)
+# Check admin session timeout (30 minutes) and validate session token
 if st.session_state.get('admin_logged_in') and st.session_state.get('admin_login_time'):
     if time.time() - st.session_state['admin_login_time'] > 1800:  # 30 minutes
         st.session_state['admin_logged_in'] = False
         st.session_state['admin_login_time'] = None
+        st.session_state['admin_session_token'] = None
         st.warning("Admin session expired. Please log in again.")
+    elif not st.session_state.get('admin_session_token'):
+        # Session token missing - possible session hijacking attempt
+        st.session_state['admin_logged_in'] = False
+        st.session_state['admin_login_time'] = None
+        st.error("Session security error. Please log in again.")
 
 # --- Sidebar Admin Login/Logout ---
 with st.sidebar:
@@ -270,8 +335,14 @@ with st.sidebar:
         if remaining_time > 0:
             st.caption(f"Session expires in {remaining_time:.0f} minutes")
         if st.button("Logout"):
+            # Secure logout - clear all admin session data
             st.session_state['admin_logged_in'] = False
             st.session_state['admin_login_time'] = None
+            st.session_state['admin_session_token'] = None
+            # Clear any cached admin data
+            for key in list(st.session_state.keys()):
+                if key.startswith('admin_') and key != 'admin_login_mode':
+                    del st.session_state[key]
             st.success("Successfully logged out")
             st.rerun()
     else:
@@ -282,25 +353,41 @@ with st.sidebar:
         else:
             pw = st.text_input("Admin password:", type="password", key="sidebar_admin_pw")
             if st.button("Login", key="sidebar_login_button"):
-                # Get admin password from configuration
-                admin_pw = None
-                try:
-                    if hasattr(st, 'secrets') and 'ADMIN_PW' in st.secrets:
-                        admin_pw = st.secrets['ADMIN_PW']
-                    else:
-                        admin_pw = os.getenv("ADMIN_PW", "admin123")
-                except Exception:
-                    admin_pw = os.getenv("ADMIN_PW", "admin123")
+                # Check rate limiting first
+                client_id = f"admin_{st.session_state.get('session_id', 'unknown')}"
+                can_attempt, rate_msg = check_admin_rate_limit(client_id)
                 
-                if pw and admin_pw and pw == admin_pw:
-                    st.session_state['admin_logged_in'] = True
-                    st.session_state['admin_login_mode'] = False
-                    st.session_state['admin_login_time'] = time.time()
-                    st.success("Successfully logged in as admin")
-                    st.rerun()
+                if not can_attempt:
+                    st.error(rate_msg)
                 else:
-                    st.error("Invalid admin password")
-                    time.sleep(1)  # Prevent brute force attempts
+                    # Record the attempt
+                    record_admin_attempt(client_id)
+                    
+                    if not pw:
+                        st.error("Please enter a password")
+                    else:
+                        # Get admin password from configuration
+                        admin_pw = None
+                        try:
+                            if hasattr(st, 'secrets') and 'ADMIN_PW' in st.secrets:
+                                admin_pw = st.secrets['ADMIN_PW']
+                            else:
+                                admin_pw = os.getenv("ADMIN_PW", "admin123")
+                        except Exception:
+                            admin_pw = os.getenv("ADMIN_PW", "admin123")
+                        
+                        if admin_pw and secure_admin_login(pw, admin_pw):
+                            st.session_state['admin_logged_in'] = True
+                            st.session_state['admin_login_mode'] = False
+                            st.session_state['admin_login_time'] = time.time()
+                            # Clear successful login attempts
+                            st.session_state['admin_login_attempts'].pop(client_id, None)
+                            st.success("Successfully logged in as admin")
+                            st.rerun()
+                        else:
+                            st.error("Invalid admin password")
+                            # Small delay to slow down brute force attempts
+                            time.sleep(2)
             if st.button("Cancel", key="sidebar_admin_cancel"):
                 st.session_state['admin_login_mode'] = False
                 st.rerun()
@@ -323,25 +410,33 @@ if not st.session_state.get('admin_logged_in'):
         )
         if st.sidebar.button("Send"):
             if user_question:
-                # Get current assignment context
-                if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
-                    questions = get_assignment_questions(st.session_state['selected_section'])
-                    current_idx = st.session_state['question_idx']
-                    assignment_context = questions[current_idx] if questions and current_idx < len(questions) else ""
-                else:
-                    assignment_context = ""
-                
-                answer = answer_query(
-                    user_question, 
-                    assignment_context, 
-                    section=st.session_state.get('selected_section', 'Ch.3'),
-                    user_email=st.session_state.get('student_email', '')
-                )
-                st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
-                # persist chat
-                save_chat(st.session_state.get('student_email', ''), user_question, answer)
-                st.session_state['user_question'] = ""  # Clear input immediately
-                st.rerun()
+                try:
+                    # Get current assignment context
+                    if 'question_idx' in st.session_state and 'selected_section' in st.session_state:
+                        questions = get_assignment_questions(st.session_state['selected_section'])
+                        current_idx = st.session_state['question_idx']
+                        assignment_context = questions[current_idx] if questions and current_idx < len(questions) else ""
+                    else:
+                        assignment_context = ""
+                    
+                    answer = answer_query(
+                        user_question, 
+                        assignment_context, 
+                        section=st.session_state.get('selected_section', 'Ch.3'),
+                        user_email=st.session_state.get('student_email', '')
+                    )
+                    st.session_state['chat_history'].insert(0, (user_question, answer))  # Add to top
+                    # persist chat
+                    try:
+                        save_chat(st.session_state.get('student_email', ''), user_question, answer)
+                    except Exception as e:
+                        # Log error but don't interrupt user experience
+                        logger.error(f"Failed to save chat: {e}")
+                    st.session_state['user_question'] = ""  # Clear input immediately
+                    st.rerun()
+                except Exception as e:
+                    st.sidebar.error("Sorry, I encountered an error processing your question. Please try again.")
+                    logger.error(f"Chat error for {st.session_state.get('student_email', 'unknown')}: {e}")
             else:
                 st.sidebar.write("Please enter a question.")
         st.sidebar.markdown("---")
@@ -366,16 +461,33 @@ def student_info_page():
     if submit:
         st.session_state['student_name'] = name
         st.session_state['student_email'] = email
-        email_clean = email.strip().lower()
-        if name and email_clean.endswith("@whu.edu"):
+        
+        # Import validation functions
+        from modules.base import validate_email, validate_name
+        
+        # Validate inputs
+        name_valid, name_msg = validate_name(name)
+        email_valid, email_msg = validate_email(email)
+        
+        if name_valid and email_valid:
             st.session_state['info_complete'] = True
-            # persist student
-            save_student(name, email_clean)
-            st.success(f"✅ Welcome {name}! You have been successfully logged in.")
-            st.rerun()
+            # persist student with validated data
+            try:
+                save_student(name_msg, email_msg)  # Use validated/cleaned data
+                st.success(f"✅ Welcome {name_msg}! You have been successfully logged in.")
+                st.rerun()
+            except ValueError as e:
+                st.error(f"Registration error: {str(e)}")
+                st.session_state['info_complete'] = False
+            except Exception as e:
+                st.error("Registration failed. Please try again.")
+                st.session_state['info_complete'] = False
         else:
             st.session_state['info_complete'] = False
-            st.warning("Please enter your name, and a valid WHU email (ending with @whu.edu) to start the assignment.")
+            if not name_valid:
+                st.error(f"Name error: {name_msg}")
+            if not email_valid:
+                st.error(f"Email error: {email_msg}")
     st.markdown("---")
 
 # --- Assignment Page ---
@@ -628,24 +740,31 @@ def assignment_page():
                     # save current answer before moving on
                     current_answer = st.session_state.get(f"ans_{current_idx}", "")
                     
-                    # For Dragon Fire Phase 2, combine input data with text area if both exist
-                    if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
-                        # Check if Phase 2 inputs were already saved
-                        from backend import get_answers_by_email
-                        existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
-                        phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
-                        
-                        if phase2_input_saved and current_answer.strip():
-                            # Combine the existing input data with the text area analysis
-                            phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
-                            combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
-                            save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
-                        elif current_answer.strip():
-                            # Just save the text area if no inputs were saved
-                            save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
-                    else:
-                        # For all other questions, save normally
-                        save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                    # Save answer with error handling
+                    if current_answer.strip():
+                        try:
+                            # For Dragon Fire Phase 2, combine input data with text area if both exist
+                            if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
+                                # Check if Phase 2 inputs were already saved
+                                from backend import get_answers_by_email
+                                existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
+                                phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
+                                
+                                if phase2_input_saved and current_answer.strip():
+                                    # Combine the existing input data with the text area analysis
+                                    phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
+                                    combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
+                                    save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
+                                elif current_answer.strip():
+                                    # Just save the text area if no inputs were saved
+                                    save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                            else:
+                                # For all other questions, save normally
+                                save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                        except Exception as e:
+                            st.error("Failed to save your answer. Please try again.")
+                            logger.error(f"Failed to save answer for {st.session_state.get('student_email', 'unknown')}: {e}")
+                            st.stop()  # Don't proceed if save failed
                     
                     st.session_state['question_idx'] += 1
                     # Clear chat history when moving to new question
@@ -666,23 +785,29 @@ def assignment_page():
                 # Save current answer with special handling for Dragon Fire Phase 2
                 current_answer = st.session_state.get(f"ans_{current_idx}", "")
                 
-                if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
-                    # Check if Phase 2 inputs were already saved
-                    from backend import get_answers_by_email
-                    existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
-                    phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
-                    
-                    if phase2_input_saved and current_answer.strip():
-                        # Combine the existing input data with the text area analysis
-                        phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
-                        combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
-                        save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
-                    elif current_answer.strip():
-                        # Just save the text area if no inputs were saved
-                        save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
-                else:
-                    # For all other questions, save normally
-                    save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                if current_answer.strip():
+                    try:
+                        if (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 1):
+                            # Check if Phase 2 inputs were already saved
+                            from backend import get_answers_by_email
+                            existing_answers = get_answers_by_email(st.session_state.get('student_email', ''))
+                            phase2_input_saved = any(ans[0] == current_idx and 'Containers:' in ans[1] for ans in existing_answers)
+                            
+                            if phase2_input_saved and current_answer.strip():
+                                # Combine the existing input data with the text area analysis
+                                phase2_inputs = next((ans[1] for ans in existing_answers if ans[0] == current_idx and 'Containers:' in ans[1]), "")
+                                combined_answer = f"{phase2_inputs}\n\n**Analysis:**\n{current_answer}"
+                                save_answer(st.session_state.get('student_email', ''), current_idx, combined_answer)
+                            elif current_answer.strip():
+                                # Just save the text area if no inputs were saved
+                                save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                        else:
+                            # For all other questions, save normally
+                            save_answer(st.session_state.get('student_email', ''), current_idx, current_answer)
+                    except Exception as e:
+                        st.error("Failed to save your final answer. Please try again.")
+                        logger.error(f"Failed to save final answer for {st.session_state.get('student_email', 'unknown')}: {e}")
+                        st.stop()
                 
                 # Mark assignment as completed
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
@@ -723,7 +848,6 @@ def assignment_page():
             st.session_state['info_complete'] = False
             st.session_state['student_name'] = ""
             st.session_state['student_email'] = ""
-            st.session_state['student_roll_number'] = ""
             st.session_state['question_idx'] = 0
             st.session_state['chat_history'] = []
             st.session_state['user_question'] = ""
@@ -789,7 +913,7 @@ def admin_page():
         if not students:
             st.info("No students have registered yet.")
         else:
-            student_options = [f"{name} - {roll_number} ({email})" for email, name, roll_number, _ in students]
+            student_options = [f"{name} ({email})" for email, name, _ in students]
             selected_student = st.selectbox("Select a student to grade:", [""] + student_options)
             
             if selected_student:
@@ -856,10 +980,14 @@ def admin_page():
                         with col2:
                             if st.button(f"Save Grade", key=f"save_grade_{student_email}_{qidx}_latest"):
                                 if new_grade:
-                                    save_grade(student_email, qidx, new_grade)
-                                    st.success("Grade saved!")
-                                    time.sleep(1)
-                                    st.rerun()
+                                    try:
+                                        save_grade(student_email, qidx, new_grade)
+                                        st.success("Grade saved!")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error("Failed to save grade. Please try again.")
+                                        logger.error(f"Failed to save grade for {student_email}: {e}")
                                 else:
                                     st.warning("Please select a grade first.")
                         
@@ -883,7 +1011,7 @@ def admin_page():
         if students:
             grading_data = []
             
-            for email, name, roll_number, _ in students:
+            for email, name, _ in students:
                 answers = get_answers_by_email(email)
                 student_row = {"Name": name, "Email": email}
                 
@@ -934,7 +1062,7 @@ def admin_page():
                     "grade_distribution": {}
                 }
                 
-                for email, name, roll_number, _ in students:
+                for email, name, _ in students:
                     answers = get_answers_by_email(email)
                     if answers:
                         section_stats["students_with_submissions"] += 1
@@ -981,15 +1109,15 @@ def admin_page():
     section = st.selectbox("Select section to export:", options=["All"] + get_available_sections())
     if st.button("Export all data to CSV"):
         students = get_all_students()
-        student_map = {s[0].strip().lower(): (s[1], s[2]) for s in students}  # email -> (name, roll_number)
+        student_map = {s[0].strip().lower(): (s[1], s[2]) for s in students}  
         submissions = get_all_submissions()  # list of (email, question_idx, answer, submitted_at)
         # Build CSV rows
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow(["email", "name", "roll_number", "question_idx", "answer", "answer_submitted_at", "latest_grade", "grade_graded_at", "chat_history_json"])
+        writer.writerow(["email", "name", "question_idx", "answer", "answer_submitted_at", "latest_grade", "grade_graded_at", "chat_history_json"])
         for email, qidx, ans, sec, submitted_at in submissions:
             email_clean = email.strip().lower()
-            name, roll_number = student_map.get(email_clean, ("", ""))
+            name = student_map.get(email_clean, ("", ""))
             # latest grade for this question
             # only include grades for the chosen section (if any)
             if section != "All" and sec != section:
@@ -1017,7 +1145,7 @@ def admin_page():
             for q_text, bot_resp, created_at in chats:
                 chat_list.append({"q": q_text, "bot": bot_resp, "at": created_at})
             chat_json = json.dumps(chat_list, ensure_ascii=False)
-            writer.writerow([email_clean, name, roll_number, qidx, ans, submitted_at, grade_row, grade_time, chat_json])
+            writer.writerow([email_clean, name, qidx, ans, submitted_at, grade_row, grade_time, chat_json])
         data = buf.getvalue()
         buf.close()
         st.download_button("Download CSV", data=data, file_name="submissions_export.csv", mime="text/csv")
@@ -1032,7 +1160,7 @@ def admin_page():
     selected = st.selectbox("Quick lookup - Select student email:", options=[""] + emails, key="quick_lookup")
     
     if selected:
-        student_info = next(((name, roll_number) for email, name, roll_number, _ in students if email == selected), ("Unknown", ""))
+        student_info = next((name for email, name in students if email == selected), "Unknown")
         student_name, student_email = student_info
         st.subheader(f"Quick View: {student_name} - ({selected})")
         
