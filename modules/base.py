@@ -11,6 +11,7 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from contextlib import contextmanager
+import html
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,8 +38,91 @@ def set_config(openai_key: str, admin_pw: str = None, max_queries: int = 100, ma
     openai.api_key = openai_key
     logger.info(f"Configuration updated: max_queries={max_queries}, max_tokens={max_tokens}")
 
+# --- Input Validation and Sanitization ---
+def validate_email(email: str) -> tuple[bool, str]:
+    """Validate WHU email address"""
+    if not email or not isinstance(email, str):
+        return False, "Email is required"
+    
+    email = email.strip().lower()
+    
+    # Length check
+    if len(email) > 100:
+        return False, "Email address too long"
+    
+    # Basic email format validation
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@whu\.edu$'
+    if not re.match(email_pattern, email):
+        return False, "Please use a valid WHU email address ending with @whu.edu"
+    
+    return True, email
+
+def validate_name(name: str) -> tuple[bool, str]:
+    """Validate and sanitize student name"""
+    if not name or not isinstance(name, str):
+        return False, "Name is required"
+    
+    # Remove HTML and dangerous characters
+    name = html.escape(name.strip())
+    
+    # Length check
+    if len(name) < 2:
+        return False, "Name must be at least 2 characters long"
+    if len(name) > 100:
+        return False, "Name too long (max 100 characters)"
+    
+    # Character validation - allow letters, spaces, hyphens, apostrophes
+    if not re.match(r"^[a-zA-Z\s'-]+$", name):
+        return False, "Name can only contain letters, spaces, hyphens, and apostrophes"
+    
+    return True, name
+
+def validate_text_input(text: str, max_length: int = 10000, field_name: str = "Input") -> tuple[bool, str]:
+    """Validate and sanitize text input (answers, chat messages)"""
+    if not text or not isinstance(text, str):
+        return False, f"{field_name} cannot be empty"
+    
+    # Length check to prevent DOS attacks
+    if len(text) > max_length:
+        return False, f"{field_name} too long (max {max_length} characters)"
+    
+    # Remove potential script injection
+    text = html.escape(text.strip())
+    
+    # Check for suspicious patterns
+    suspicious_patterns = [
+        r'<script.*?</script>',
+        r'javascript:',
+        r'on\w+\s*=',
+        r'<iframe',
+        r'<object',
+        r'<embed'
+    ]
+    
+    for pattern in suspicious_patterns:
+        if re.search(pattern, text, re.IGNORECASE):
+            logger.warning(f"Suspicious content detected in {field_name}: {pattern}")
+            return False, f"{field_name} contains invalid content"
+    
+    return True, text
+
+def sanitize_for_db(value: str, max_length: int = None) -> str:
+    """Sanitize value for database storage"""
+    if not value:
+        return ""
+    
+    # HTML escape
+    value = html.escape(str(value).strip())
+    
+    # Limit length if specified
+    if max_length and len(value) > max_length:
+        value = value[:max_length]
+    
+    return value
+
 # Rate limiting storage
 _user_queries = {}  # {email: [(timestamp, token_count), ...]}
+_ip_queries = {}    # {ip: [(timestamp, endpoint), ...]}
 _rate_limit_lock = threading.Lock()
 
 # Make _user_queries accessible for admin dashboard
@@ -46,14 +130,14 @@ def get_user_queries():
     """Get user queries data for admin dashboard"""
     return _user_queries
 
-def check_rate_limit(email: str, estimated_tokens: int = 10000) -> tuple[bool, str]:
-    """Check if user is within rate limits. Returns (allowed, message)"""
+def check_rate_limit(email: str, estimated_tokens: int = 10000, ip_address: str = None) -> tuple[bool, str]:
+    """Enhanced rate limiting with both email and IP-based checks"""
     with _rate_limit_lock:
         current_time = datetime.utcnow()
         hour_ago = current_time - timedelta(hours=1)
         day_ago = current_time - timedelta(days=1)
         
-        # Clean old entries
+        # Clean old entries for email
         if email in _user_queries:
             _user_queries[email] = [(ts, tokens) for ts, tokens in _user_queries[email] 
                                    if ts > day_ago]
@@ -62,7 +146,7 @@ def check_rate_limit(email: str, estimated_tokens: int = 10000) -> tuple[bool, s
         
         user_history = _user_queries[email]
         
-        # Check hourly query limit
+        # Check email-based limits
         recent_queries = [ts for ts, _ in user_history if ts > hour_ago]
         if len(recent_queries) >= _config['max_queries_per_hour']:
             return False, f"Rate limit exceeded: Max {_config['max_queries_per_hour']} queries per hour"
@@ -72,14 +156,34 @@ def check_rate_limit(email: str, estimated_tokens: int = 10000) -> tuple[bool, s
         if daily_tokens + estimated_tokens > _config['max_tokens_per_day']:
             return False, f"Token limit exceeded: Max {_config['max_tokens_per_day']} tokens per day"
         
+        # IP-based rate limiting if IP provided
+        if ip_address:
+            if ip_address not in _ip_queries:
+                _ip_queries[ip_address] = []
+            
+            # Clean old IP entries
+            _ip_queries[ip_address] = [(ts, endpoint) for ts, endpoint in _ip_queries[ip_address] 
+                                      if ts > hour_ago]
+            
+            # Check IP rate limit (more permissive than email-based)
+            ip_recent = len(_ip_queries[ip_address])
+            if ip_recent >= _config['max_queries_per_hour'] * 3:  # 3x limit for IP
+                return False, "IP rate limit exceeded. Please try again later."
+        
         return True, "OK"
 
-def record_query(email: str, tokens_used: int):
+def record_query(email: str, tokens_used: int, ip_address: str = None):
     """Record a query for rate limiting"""
     with _rate_limit_lock:
         if email not in _user_queries:
             _user_queries[email] = []
         _user_queries[email].append((datetime.utcnow(), tokens_used))
+        
+        # Record IP activity if provided
+        if ip_address:
+            if ip_address not in _ip_queries:
+                _ip_queries[ip_address] = []
+            _ip_queries[ip_address].append((datetime.utcnow(), "query"))
 
 def clear_rate_limits(email: str = None):
     """Clear rate limiting data - for testing/admin purposes"""
@@ -165,7 +269,12 @@ def get_db_connection():
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH, timeout=10.0)
+        # Enhanced security settings
         conn.execute("PRAGMA journal_mode=WAL")  # Better concurrent access
+        conn.execute("PRAGMA synchronous=NORMAL")  # Balance performance/safety
+        conn.execute("PRAGMA temp_store=memory")  # Store temp data in memory
+        conn.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
+        conn.execute("PRAGMA foreign_keys=ON")  # Enable foreign key constraints
         yield conn
         conn.commit()
     except sqlite3.Error as e:
@@ -178,116 +287,185 @@ def get_db_connection():
             conn.close()
 
 def init_db():
-    """Initialize the database with all required tables"""
+    """Initialize the database with all required tables and security constraints"""
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
     
-    # Create students table with original schema first
+    # Create students table with constraints
     cur.execute("""
     CREATE TABLE IF NOT EXISTS students (
-        email TEXT PRIMARY KEY,
-        name TEXT,
-        created_at TEXT
+        email TEXT PRIMARY KEY CHECK(
+            length(email) <= 100 AND 
+            email LIKE '%@whu.edu' AND
+            length(email) > 7
+        ),
+        name TEXT CHECK(length(name) >= 2 AND length(name) <= 100),
+        created_at TEXT NOT NULL
     )
     """)
-    
-    # Add roll_number column if it doesn't exist (migration)
-    try:
-        cur.execute("ALTER TABLE students ADD COLUMN roll_number TEXT DEFAULT ''")
-        logger.info("Added roll_number column to students table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" in str(e).lower():
-            logger.info("roll_number column already exists")
-        else:
-            logger.error(f"Error adding roll_number column: {e}")
-    
+
+    # Create answers table with constraints
     cur.execute("""
     CREATE TABLE IF NOT EXISTS answers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT,
-        question_idx INTEGER,
-        answer TEXT,
-        section TEXT,
-        submitted_at TEXT
+        email TEXT NOT NULL CHECK(
+            length(email) <= 100 AND 
+            email LIKE '%@whu.edu'
+        ),
+        question_idx INTEGER NOT NULL CHECK(question_idx >= 0 AND question_idx < 100),
+        answer TEXT NOT NULL CHECK(length(answer) <= 50000),
+        section TEXT DEFAULT 'Ch.3' CHECK(length(section) <= 50),
+        submitted_at TEXT NOT NULL,
+        FOREIGN KEY (email) REFERENCES students(email)
     )
     """)
+    
+    # Create chats table with constraints
     cur.execute("""
     CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT,
-        question TEXT,
-        bot_response TEXT,
-        section TEXT,
-        created_at TEXT
+        email TEXT NOT NULL CHECK(
+            length(email) <= 100 AND 
+            email LIKE '%@whu.edu'
+        ),
+        question TEXT NOT NULL CHECK(length(question) <= 5000),
+        bot_response TEXT CHECK(length(bot_response) <= 20000),
+        section TEXT DEFAULT 'Ch.3' CHECK(length(section) <= 50),
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (email) REFERENCES students(email)
     )
     """)
+    
+    # Create grades table with constraints
     cur.execute("""
     CREATE TABLE IF NOT EXISTS grades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT,
-        question_idx INTEGER,
-        grade TEXT,
-        section TEXT,
-        graded_at TEXT
+        email TEXT NOT NULL CHECK(
+            length(email) <= 100 AND 
+            email LIKE '%@whu.edu'
+        ),
+        question_idx INTEGER NOT NULL CHECK(question_idx >= 0 AND question_idx < 100),
+        grade TEXT NOT NULL CHECK(grade IN ('0', '0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5')),
+        section TEXT DEFAULT 'Ch.3' CHECK(length(section) <= 50),
+        graded_at TEXT NOT NULL,
+        FOREIGN KEY (email) REFERENCES students(email)
     )
     """)
+    
+    # Create indices for better performance
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_answers_email_section ON answers(email, section)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_chats_email_section ON chats(email, section)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_grades_email_section ON grades(email, section)")
+    
     conn.commit()
 
-    # Add section columns if missing (for upgrades)
+    # Add section columns if missing (for upgrades) - but handle errors gracefully
     def ensure_column(table, column, col_def):
-        cur.execute(f"PRAGMA table_info({table})")
-        cols = [r[1] for r in cur.fetchall()]
-        if column not in cols:
-            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+        try:
+            cur.execute(f"PRAGMA table_info({table})")
+            cols = [r[1] for r in cur.fetchall()]
+            if column not in cols:
+                cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+                logger.info(f"Added column {column} to table {table}")
+        except sqlite3.Error as e:
+            logger.warning(f"Could not add column {column} to {table}: {e}")
 
     ensure_column('answers', 'section', "TEXT DEFAULT 'Ch.3'")
     ensure_column('chats', 'section', "TEXT DEFAULT 'Ch.3'")
     ensure_column('grades', 'section', "TEXT DEFAULT 'Ch.3'")
+    
+    conn.commit()
     conn.close()
 
-def save_student(name: str, email: str, roll_number: str = ""):
-    """Save student information to database"""
-    email = email.strip().lower()
+def save_student(name: str, email: str):
+    """Save student information to database with validation"""
     try:
+        # Validate inputs
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.error(f"Invalid email provided: {email}")
+            raise ValueError(f"Invalid email: {email_clean}")
+        
+        name_valid, name_clean = validate_name(name)
+        if not name_valid:
+            logger.error(f"Invalid name provided: {name}")
+            raise ValueError(f"Invalid name: {name_clean}")
+        
         with get_db_connection() as conn:
             cur = conn.cursor()
             # Try the new schema first, fallback to old schema if needed
             try:
                 cur.execute("INSERT OR REPLACE INTO students(email, name, roll_number, created_at) VALUES (?, ?, ?, ?)",
-                            (email, name, roll_number, datetime.utcnow().isoformat()))
+                            (email_clean, name_clean, "", datetime.utcnow().isoformat()))
             except sqlite3.OperationalError as e:
                 if "no column named roll_number" in str(e).lower():
                     cur.execute("INSERT OR REPLACE INTO students(email, name, created_at) VALUES (?, ?, ?)",
-                                (email, name, datetime.utcnow().isoformat()))
+                                (email_clean, name_clean, datetime.utcnow().isoformat()))
                 else:
                     raise
-        logger.info(f"Student saved: {email} (Roll: {roll_number})")
+        logger.info(f"Student saved: {email_clean}")
     except Exception as e:
         logger.error(f"Error saving student {email}: {e}")
         raise
 
 def save_answer(email: str, question_idx: int, answer: str, section: str = 'Ch.3'):
-    """Save answer to database"""
-    email = email.strip().lower()
+    """Save answer to database with validation"""
     try:
+        # Validate email
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.error(f"Invalid email in save_answer: {email}")
+            raise ValueError(f"Invalid email: {email_clean}")
+        
+        # Validate answer content
+        answer_valid, answer_clean = validate_text_input(answer, max_length=50000, field_name="Answer")
+        if not answer_valid:
+            logger.error(f"Invalid answer content for {email}")
+            raise ValueError(f"Invalid answer: {answer_clean}")
+        
+        # Validate question index
+        if not isinstance(question_idx, int) or question_idx < 0 or question_idx > 100:
+            logger.error(f"Invalid question index: {question_idx}")
+            raise ValueError("Invalid question index")
+        
+        # Sanitize section name
+        section = sanitize_for_db(section, max_length=50)
+        
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("INSERT INTO answers(email, question_idx, answer, section, submitted_at) VALUES (?, ?, ?, ?, ?)",
-                        (email, question_idx, answer, section, datetime.utcnow().isoformat()))
-        logger.info(f"Answer saved: {email}, Q{question_idx}")
+                        (email_clean, question_idx, answer_clean, section, datetime.utcnow().isoformat()))
+        logger.info(f"Answer saved: {email_clean}, Q{question_idx}")
     except Exception as e:
         logger.error(f"Error saving answer for {email}: {e}")
         raise
 
 def save_chat(email: str, question: str, bot_response: str, section: str = 'Ch.3'):
-    """Save chat to database"""
-    email = email.strip().lower()
+    """Save chat to database with validation"""
     try:
+        # Validate email
+        email_valid, email_clean = validate_email(email)
+        if not email_valid:
+            logger.error(f"Invalid email in save_chat: {email}")
+            raise ValueError(f"Invalid email: {email_clean}")
+        
+        # Validate question content
+        question_valid, question_clean = validate_text_input(question, max_length=5000, field_name="Question")
+        if not question_valid:
+            logger.error(f"Invalid question content for {email}")
+            raise ValueError(f"Invalid question: {question_clean}")
+        
+        # Validate bot response (more lenient as it's system-generated)
+        bot_response = sanitize_for_db(bot_response, max_length=20000)
+        
+        # Sanitize section name
+        section = sanitize_for_db(section, max_length=50)
+        
         with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute("INSERT INTO chats(email, question, bot_response, section, created_at) VALUES (?, ?, ?, ?, ?)",
-                        (email, question, bot_response, section, datetime.utcnow().isoformat()))
-        logger.info(f"Chat saved: {email}")
+                        (email_clean, question_clean, bot_response, section, datetime.utcnow().isoformat()))
+        logger.info(f"Chat saved: {email_clean}")
     except Exception as e:
         logger.error(f"Error saving chat for {email}: {e}")
         raise
@@ -335,7 +513,7 @@ def get_all_students():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT email, name, roll_number, created_at FROM students ORDER BY email")
+            cur.execute("SELECT email, name, created_at FROM students ORDER BY email")
             rows = cur.fetchall()
         return rows
     except Exception as e:
