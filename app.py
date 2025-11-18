@@ -699,7 +699,8 @@ def assignment_page():
             student_email = st.session_state.get('student_email', '')
 
             # Load the scenarios from the module
-            scenarios = get_disruption_scenarios()
+            scenarios_dict = get_disruption_scenarios()
+            scenarios = list(scenarios_dict.values())  # Convert to list for iteration
             assigned = assign_scenario(student_email) if student_email else None
 
             # Build selectbox options (use titles as the visible label)
