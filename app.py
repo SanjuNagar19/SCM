@@ -507,7 +507,7 @@ def assignment_page():
     
     # If no section is selected, show selection prompt
     if not selected_section:
-        st.info("👆 Please select a section above to begin working on assignments.")
+        st.info("Please select a section above to begin working on assignments.")
         return
     
     # Update session state with selection
@@ -813,8 +813,7 @@ def assignment_page():
                 st.session_state[f'assignment_completed_{st.session_state.get("selected_section", "Ch.3")}'] = True
                 
                 # Show completion message
-                st.success("🎉 Assignment submitted successfully!")
-                st.balloons()
+                st.success("Assignment submitted successfully! You can now close the window!")
                 
                 # Optional: move to a completion state or reset
                 time.sleep(2)
