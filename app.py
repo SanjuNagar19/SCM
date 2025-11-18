@@ -879,7 +879,7 @@ def admin_page():
     
     with col3:
         chats = []
-        for student_email, _, _, _ in students:
+        for student_email, _, _ in students:
             chats.extend(get_chats_by_email(student_email))
         st.metric("Total Chat Interactions", len(chats))
     
@@ -1109,7 +1109,7 @@ def admin_page():
     section = st.selectbox("Select section to export:", options=["All"] + get_available_sections())
     if st.button("Export all data to CSV"):
         students = get_all_students()
-        student_map = {s[0].strip().lower(): (s[1], s[2]) for s in students}  
+        student_map = {s[0].strip().lower(): s[1] for s in students}  # email -> name mapping
         submissions = get_all_submissions()  # list of (email, question_idx, answer, submitted_at)
         # Build CSV rows
         buf = io.StringIO()
@@ -1117,7 +1117,7 @@ def admin_page():
         writer.writerow(["email", "name", "question_idx", "answer", "answer_submitted_at", "latest_grade", "grade_graded_at", "chat_history_json"])
         for email, qidx, ans, sec, submitted_at in submissions:
             email_clean = email.strip().lower()
-            name = student_map.get(email_clean, ("", ""))
+            name = student_map.get(email_clean, "")
             # latest grade for this question
             # only include grades for the chosen section (if any)
             if section != "All" and sec != section:
@@ -1137,10 +1137,8 @@ def admin_page():
                 grade_row = ""
                 grade_time = ""
             # chat history aggregated
-            # fetch chat history for the selected section
-            # Use the new modular function approach
-            chats = get_chats_by_email(email, section if section != "All" else 'Ch.3')
-            chats = get_chats_by_email(email_clean)
+            # fetch chat history for the selected section  
+            chats = get_chats_by_email(email_clean, section if section != "All" else 'Ch.3')
             chat_list = []
             for q_text, bot_resp, created_at in chats:
                 chat_list.append({"q": q_text, "bot": bot_resp, "at": created_at})
@@ -1160,8 +1158,7 @@ def admin_page():
     selected = st.selectbox("Quick lookup - Select student email:", options=[""] + emails, key="quick_lookup")
     
     if selected:
-        student_info = next((name for email, name in students if email == selected), "Unknown")
-        student_name, student_email = student_info
+        student_name = next((name for email, name, _ in students if email == selected), "Unknown")
         st.subheader(f"Quick View: {student_name} - ({selected})")
         
         # Show summary
