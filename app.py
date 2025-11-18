@@ -19,6 +19,7 @@ from backend import (
     # Module-specific functions
     validate_numeric_answer,
     assign_scenario,
+    get_disruption_scenarios,
     calculate_volume_metrics,
     calculate_transport_costs,
     collect_phase2_inputs,
@@ -694,17 +695,52 @@ def assignment_page():
         
         
         elif current_idx == 3:  # Phase 4: Risk Management & Scenario Planning
-            # Assign a scenario using the modular function
-            student_email = st.session_state.get('student_email', 'anonymous')
-            assigned_scenario = assign_scenario(student_email)
-            
-            st.info(f"**Your Assigned Disruption**: {assigned_scenario['title']}")
-            
+            # Offer students a selectable disruption scenario and show details
+            student_email = st.session_state.get('student_email', '')
+
+            # Load the scenarios from the module
+            scenarios = get_disruption_scenarios()
+            assigned = assign_scenario(student_email) if student_email else None
+
+            # Build selectbox options (use titles as the visible label)
+            option_titles = [s.get('title', f"Scenario {s.get('id', idx+1)}") for idx, s in enumerate(scenarios)]
+            default_index = 0
+            if assigned:
+                try:
+                    default_index = option_titles.index(assigned.get('title'))
+                except ValueError:
+                    default_index = 0
+
+            st.info("Choose a disruption scenario for Phase 4. A deterministic assignment is shown as the default, but you may select another scenario.")
+
+            selected_title = st.selectbox("Select disruption scenario:", options=option_titles, index=default_index, key="dragon_q4_scenario")
+            # Map selected title back to scenario dict
+            selected_scenario = next((s for s in scenarios if s.get('title') == selected_title), scenarios[0])
+
+            # Show details inline
             with st.expander("Scenario Details", expanded=True):
-                st.markdown(f"**Situation**: {assigned_scenario['description']}")
+                st.markdown(f"**Situation**: {selected_scenario.get('description', '')}")
                 st.markdown("**Key Impacts**:")
-                for impact in assigned_scenario['impacts']:
+                for impact in selected_scenario.get('impacts', []):
                     st.markdown(f"• {impact}")
+
+            # Auto-save selection when student has email and selection changes
+            if student_email:
+                # Check if this is a new selection by comparing with last saved
+                last_saved_key = f"dragon_q4_last_saved_{student_email}"
+                if st.session_state.get(last_saved_key) != selected_title:
+                    # Build a concise saved text entry
+                    impacts_text = "\n".join([f"- {i}" for i in selected_scenario.get('impacts', [])])
+                    saved_text = f"Selected Scenario: {selected_scenario.get('title')}\n\n{selected_scenario.get('description', '')}\n\nKey Impacts:\n{impacts_text}"
+                    try:
+                        save_answer(student_email, current_idx, saved_text)
+                        st.session_state[last_saved_key] = selected_title
+                        st.success("✓ Scenario selection auto-saved.")
+                    except Exception as e:
+                        st.error("Failed to auto-save scenario selection.")
+                        logger.error(f"Failed to save scenario selection for {student_email}: {e}")
+            else:
+                st.warning("Please complete your student information (name & email) before your scenario selection can be saved.")
     
     # For all sections except Dragon Fire Case Phase 1 Q1, show the regular text area for answers
     if not (st.session_state.get('selected_section') == 'Dragon Fire Case' and current_idx == 0):
